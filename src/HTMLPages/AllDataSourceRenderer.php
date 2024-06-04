@@ -24,7 +24,7 @@ class AllDataSourceRenderer extends GTKHTMLPage
 	public $itemsPerPage;
     public $echoSelectedIfTrue;
 
-    public function renderForDataSource($dataSource, $user, $options)
+    public function renderForDataSource(/* DataAccessInterface */ $dataSource, $user, $options)
     {
         $this->dataSource = $dataSource;
         $this->user 	  = $user;
@@ -276,11 +276,15 @@ class AllDataSourceRenderer extends GTKHTMLPage
 			<button type="submit">Search</button>
 			<select name="columnToSearch" id="columnToSearch_select">
     			<?php
-        		foreach ($this->searchableColumns as $columnMapping) 
+        		foreach ($this->searchableColumns as $columnMapping)
         		{
         		    echo '<option';
 					echo ' value="'.$columnMapping->phpKey.'"';
 					$isSelected = false;
+					if($this->dataSource->defaultSearchColumn)
+					{
+						$isSelected = true;
+					}
 					if ($isSelected)
 					{
 						echo ' selected';

@@ -169,7 +169,8 @@ class DataAccess /* implements Serializable */
 	private $db;
 	public  $_tableName;
 	public  $dataMapping;
-	public  $defaultOrderByColumn; 
+	public  $defaultOrderByColumn;
+    public  $defaultSearchColumn;
 	public  $defaultOrderByOrder = 'ASC';
     public  $singleItemName      = 'Data Access Item';
     public  $pluralItemName      = 'Data Access Items';
