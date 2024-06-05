@@ -61,6 +61,7 @@
         "files": [
             "configure/databases.php",
             "configure/functions/HasPermission.php",
+            "configure/functions/www-Debug.php",
             "configure/lang.php",
             "configure/permissions.php"
         ],

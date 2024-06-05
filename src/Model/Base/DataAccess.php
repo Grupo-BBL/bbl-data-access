@@ -164,6 +164,7 @@ class DataAccess /* implements Serializable */
             ]
         ];
     }
+    public  $debug;
     public  $dataSetViews = [];
     public  $dataAccessorName;
 	private $db;
