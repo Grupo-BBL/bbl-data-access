@@ -192,6 +192,20 @@ class DataAccess /* implements Serializable */
 	public $sqliteTableName;
 	public $sqliteDefaultOrderByColumn;
 
+    public function currentUser()
+    {
+        return DataAccessManager::get("persona")->getCurrentUser();
+    }
+
+    public function currentUserHasRoles($arrayOfRows)
+    {
+        $currentUser = $this->currentUser();
+
+        return DataAccessManager::get("persona")->isInGroups(
+            $currentUser, 
+            $arrayOfRows);
+    }
+
     public function getDataSource($name)
     {
         return DataAccessManager::get($name);
@@ -574,12 +588,15 @@ class DataAccess /* implements Serializable */
 
         $toReturn = "";
 
+        $didPrint = false;
+
         if ($this->userHasPermissionTo("edit", $user, $item))
         {
             $toReturn .= $this->linkForKeyItemOptions("edit", $item, [
                 "label" => "Editar"
             ]);
             $toReturn .= "<br/>";
+            $didPrint = true;
         }
 
         
@@ -589,6 +606,13 @@ class DataAccess /* implements Serializable */
                 "label" => "Ver"
             
             ]);
+            $toReturn .= "<br/>";
+            $didPrint = true;
+        }
+
+        if ($didPrint)
+        {
+            $toReturn .= "<hr/>";
             $toReturn .= "<br/>";
         }
 

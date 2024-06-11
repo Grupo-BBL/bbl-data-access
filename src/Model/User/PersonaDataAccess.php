@@ -850,20 +850,18 @@ class PersonaDataAccess extends DataAccess
 
 			$grantingUserID = $this->valueForKey("id", $grantingUser);
 		}
-		else
-		{
-			if ($debug)
-			{
-				error_log("Not a qualified role");
-			}
 
-			$toInsert = [
-				"role_id" => $roleID,
-				"user_id" => $userID,
-			];
-			
-			DataAccessManager::get("flat_roles")->insert($toInsert);
+		if ($debug)
+		{
+			error_log("Not a qualified role");
 		}
+		$toInsert = [
+			"role_id" => $roleID,
+			"user_id" => $userID,
+		];
+		
+		DataAccessManager::get("flat_roles")->insert($toInsert);
+		// DataAccessManager::get("role_person_relationships")->insert($toInsert);
 	}
 
 	public function permissionsForUser($user)

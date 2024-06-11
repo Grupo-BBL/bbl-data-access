@@ -24,7 +24,7 @@ class GTKDataAccessLink
 		$this->url = $url;
         $this->dataSource = $dataSource;
 		$this->permission = $permission;	
-        $this->key        = $permission;
+        $this->key        = $url;
 
 		
 		if (isset($options["label"]))
