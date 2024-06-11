@@ -20,6 +20,8 @@ To avoid such issues, it's a good practice to ensure that data is consistently t
 
 */
 
+use function PHPUnit\Framework\throwException;
+
 class CustomInputFunctionArgument
 {
     public $dataAccessor;
@@ -251,7 +253,6 @@ class GTKColumnMapping extends GTKColumnBase
         $this->columnSize          = $options['columnSize']       ?? null;   
         $this->allowNulls          = $options['allowNulls']       ?? null;   
         $this->defaultValue        = $options['defaultValue']     ?? null; 
-        $this->isAutoIncrement     = $options['isAutoIncrement']  ?? null; 
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -807,6 +808,9 @@ class GTKColumnMapping extends GTKColumnBase
             case "sqlite":
                 return $this->doesColumnExistSQLite($db, $tableName);
             case "sqlsrv":
+                break;
+            case "mysql":
+                return $this->doesColumnExistMysql($db, $tableName);
             default:
                 return $this->doesColumnExistSqlServer($db, $tableName);
                 
@@ -816,6 +820,25 @@ class GTKColumnMapping extends GTKColumnBase
     public function doesColumnExistSqlServer($db, $tableName)
     {
         $tableName = $tableName;
+
+        $columnName = $this->getSqlColumnName();
+
+        $sql = "SELECT * FROM information_schema.columns 
+                WHERE 
+                table_name = '{$tableName}' 
+                AND 
+                column_name = '{$columnName}'";
+
+        $stmt = $db->prepare($sql);
+
+        $stmt->execute();
+
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return count($result) > 0;
+    }
+    public function doesColumnExistMysql($db, $tableName)
+    {
 
         $columnName = $this->getSqlColumnName();
 
@@ -1115,6 +1138,8 @@ class GTKColumnMapping extends GTKColumnBase
         return $this->getCreateSQLForDriverName($driverName);
     }
 
+
+
     public function getCreateSQLForDriverName($driverName)
     {
         $columnName = $this->getSqlColumnName();
@@ -1123,7 +1148,40 @@ class GTKColumnMapping extends GTKColumnBase
     
         $toReturn = $columnName;
 
-        $columnType = $this->getColumnTypeForDriverName($driverName);
+       // $columnType = $this->getColumnTypeForDriverName($driverName);
+
+        if($driverName == 'mysql')
+        {
+            
+            $sql = $columnName." ";
+            //TODO hacer funcionar el metodo getColumnTypeForDriverName
+            //$type= $this->$this->getColumnTypeForDriverName($driverName);
+            $type = $this->type;
+            if(!$type)
+            {
+                throw new Exception("La columna: ".$this->phpKey." no tiene un valor de tipo de dato");
+            }
+            $sql .= $type." ";
+
+            if(!$this->isNullable())
+            {
+                $sql .= "NOT NULL "; 
+            }
+            
+
+            if($this->isAutoIncrement())
+            {
+                $sql .= "AUTO_INCREMENT ";
+            }
+
+            if($this->isPrimaryKey())
+            {
+                $sql.= "PRIMARY KEY";
+            }
+
+
+            return $sql;
+        }
 
         if ($driverName == 'pgsql' && $this->isAutoIncrement()) 
         {
@@ -1209,6 +1267,8 @@ class GTKColumnMapping extends GTKColumnBase
                 break;
             
             case 'mysql':
+                $this->addColumnIfNotExistsMySQL($db, $tableName);
+                break;
             case 'pgsql':
             case 'oci': // Oracle
             default:
@@ -1249,6 +1309,48 @@ class GTKColumnMapping extends GTKColumnBase
             if ($defaultValue) {
                 $sql .= " DEFAULT '{$defaultValue}'";
             }
+    
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+        }
+    }
+    function addColumnIfNotExistsMySQL($db, $tableName)
+    {
+        $columnName = $this->getSqlColumnName();
+
+        if (!$this->doesColumnExistMysql($db, $tableName))
+        {
+            $type   =  $this->type   ?? 'nvarchar';
+            $allowNulls   = $this->allowNulls   ?? true;
+            $primaryKey = $this->_isPrimaryKey  ?? false;
+            $autoIncrement = $this->isAutoIncrement ?? false;
+            
+    
+            
+            
+            // Construct the main ALTER TABLE statement
+            $sql = "ALTER TABLE ".$tableName. " ADD ";
+            $sql .= $columnName." ";
+            $sql .= $type." ";
+
+            if(!$allowNulls)
+            {
+                $sql .= "NOT NULL "; 
+            }
+
+            if($autoIncrement)
+            {
+                $sql .= "AUTO_INCREMENT ";
+            }
+
+            if($primaryKey)
+            {
+                $sql.= "PRIMARY KEY";
+            }
+
+
+
+            
     
             $stmt = $db->prepare($sql);
             $stmt->execute();

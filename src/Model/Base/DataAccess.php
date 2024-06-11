@@ -308,6 +308,9 @@ class DataAccess /* implements Serializable */
                 case "sqlite":
                     $this->createTable();
                     break;
+                
+                case "mysql":
+                    $this->createTable($driverName);
                 default:
                     gtk_log("CANNOT create table for: ".get_class($this));
                     $sql = $this->createTableSQLString();
@@ -330,7 +333,7 @@ class DataAccess /* implements Serializable */
                 if (!$columnMapping->doesColumnExist($this->getPDO(), $this->tableName()))
                 {
                     $missingColumns[] = $columnMapping;
-                    // $columnMapping->addColumnIfNotExists($this->getPDO(), $this->tableName());
+                    $columnMapping->addColumnIfNotExists($this->getPDO(), $this->tableName());
                 }
             }
 
@@ -1354,6 +1357,73 @@ class DataAccess /* implements Serializable */
 
         return $sql;
     }
+    public function createTablesMySQLString()
+    {
+
+
+        //query de ejemplo
+        // CREATE TABLE usuarios (
+        //     id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        //     nombre VARCHAR(30) NOT NULL,
+        //     apellido VARCHAR(30) NOT NULL,
+        //     email VARCHAR(50),
+        //     reg_date TIMESTAMP
+        // );
+        $debug = false;
+
+        $columns = $this->dataMapping->ordered;
+
+        $sql = "";
+        $tableName = $this->tableName();
+
+        $sql .= "CREATE TABLE ".$tableName;
+        $sql .= " (";
+
+        $isFirst = true;
+
+        if ($debug)
+        {
+            error_log("Will make table with ".count($columns)." columns.");
+        }
+
+        $additionalIndexQueries = [];
+
+        foreach ($columns as $columnMapping)
+        {
+            if (!($columnMapping instanceof GTKColumnMapping))
+            {
+                continue;
+            }
+            if ($debug)
+            {
+                error_log("'DataAccess/createTableSQLString()' - working on column: ".$columnMapping->phpKey);
+            }
+            if ($isFirst)
+            {
+                $isFirst = false;
+            }
+            else
+            {
+                $sql .= ", ";
+            }
+            
+            $sql .= $columnMapping->getCreateSQLForPDO($this->getPDO());      
+        }
+
+        $sql .= ");";
+
+        foreach ($additionalIndexQueries as $query)
+        {
+            $sql .= $query.";";
+        }
+
+        if ($debug)
+        {
+            error_log("Create Table - SQL: ".$sql);
+        }
+
+        return $sql;
+    }
 
     public function createUniqueIndexes()
     {
@@ -1386,9 +1456,9 @@ class DataAccess /* implements Serializable */
         }
     }
 
-    public function createTable()
+    public function createTable($driverName=null)
     {
-        $debug = false;
+        $debug = true;
 
         if ($debug)
         {
@@ -1397,39 +1467,49 @@ class DataAccess /* implements Serializable */
 
         if (!$this->tableExists())
         {
+           switch ($driverName) {
+            case 'sqlite':
+                $sql = $this->createTableSQLString();
+                    break;
+            case 'mysql':
+                $sql = $this->createTablesMySQLString();
+                    break;
             
-            $sql = $this->createTableSQLString();
+            default:
+                # code...
+                break;
+           }
 
-            try
-            {
-                if ($debug)
-                {
-                    gtk_log("createTable :://:: Will exec query: $sql");
-                }
+           try
+           {
+               if ($debug)
+               {
+                   gtk_log("createTable :://:: Will exec query: $sql");
+               }
 
-                $this->getPDO()->exec($sql);
+               $this->getPDO()->exec($sql);
 
-                if ($debug)
-                {
-                    gtk_log("Table created.");
-                }
-            }
-            catch (PDOException $e)
-            {
-                die("Error creating table for ".get_class($this)." SQL: ".$sql." - ".$e->getMessage());
-                
-                $isInvalid = '';
+               if ($debug)
+               {
+                   gtk_log("Table created.");
+               }
+           }
+           catch (PDOException $e)
+           {
+               die("Error creating table for ".get_class($this)." SQL: ".$sql." - ".$e->getMessage());
+               
+               $isInvalid = '';
 
-                QueryExceptionManager::manageQueryExceptionForDataSource(
-                    $this, 
-                    $e, 
-                    $sql, 
-                    null,  // $item,
-                    $isInvalid); // $isInvalid
-        
-                throw $e;
-            }
-
+               QueryExceptionManager::manageQueryExceptionForDataSource(
+                   $this, 
+                   $e, 
+                   $sql, 
+                   null,  // $item,
+                   $isInvalid); // $isInvalid
+       
+               throw $e;
+           }
+            
         }
         else
         {
@@ -3590,7 +3670,9 @@ class DataAccess /* implements Serializable */
         // Build SQL query based on the DB type
         switch ($driverName) {
             case 'mysql':
-                $sql = "SHOW TABLES LIKE ?";
+                $sql = "SELECT table_name FROM 
+                information_schema.tables 
+                where table_name = ?";
                 $param = [$tableName];
                 break;
                 
@@ -3633,7 +3715,7 @@ class DataAccess /* implements Serializable */
         $stmt = $this->getPDO()->prepare($sql);
         $stmt->execute($param);
 
-        if ($driverName == 'sqlite') {
+        if ($driverName == 'sqlite' or $driverName == 'mysql' ) {
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($debug)
             {
