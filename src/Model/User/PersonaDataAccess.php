@@ -23,7 +23,6 @@ function validatePasswordIsSecure($password, $delegate = null)
 			error_log("`validatePasswordIsSecure` - No delegate.");
 		}
 	}
-	
 	global $_GLOBALS;
 	if (!isset($_GLOBALS["APP_PASSWORD_REQUIREMENTS"]))
 	{
@@ -194,6 +193,9 @@ class PersonaDataAccess extends DataAccess
 		$query->addWhereClause($whereGroup);
 	}
 
+	
+
+
 	public static function getCurrentUser()
 	{
 		return DataAccessManager::get("session")->getCurrentApacheUserOrSendToLoginWithRedirect("/auth/login.php");
@@ -224,6 +226,12 @@ class PersonaDataAccess extends DataAccess
 	{
 		$roles = DataAccessManager::get('role_person_relationships')->rolesForUser($user);
 		$user["roles"] = $roles;
+	}
+
+	public static function deleteCurrentSessionCookie()
+	{
+		unset($_COOKIE['AuthCookie']);
+		setcookie('AuthCookie', '', -1, '/'); 
 	}
 
 	public static function logout($returnToPath = null)
@@ -632,57 +640,62 @@ class PersonaDataAccess extends DataAccess
 	}	
 
 	// public function createUserWithNoPassword($)
-
 	public function createUserIfNotExists($user)
-	{
-		if (!$this->where("email", $user['email']))
-		{
-			if ($user["password"])
-			{
-				$password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
-				$user['password_hash'] = $password_hash;
-			}
+    {
+        
+        $existingUser = $this->getOne('email', $user['email']);
+        if ($existingUser) {
+            return false; 
+        }
 
-			$this->createUser($user);		
-		}
-	}
+        // Crear el nuevo usuario
+        if ($user["password"]) {
+            $password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
+            $user['password_hash'] = $password_hash;
+            unset($user['password']); // Eliminar el campo de contraseña en texto plano
+        }
+
+        $didInsert = $this->createUser($user);
+        return $didInsert; 
+    }
+
 	
 	public function createUser($user)
-	{
-		$query = "INSERT INTO {$this->tableName()} 
-			(cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado)
-			VALUES
-			(:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo')";
-			
-		$statement = $this->getDB()->prepare($query);
+    {
+        $query = "INSERT INTO {$this->tableName()} 
+            (cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado)
+            VALUES
+            (:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo')";
+            
+        $statement = $this->getDB()->prepare($query);
 
-		$cedula = null;
+        $cedula = null;
 
-		if (isset($user["cedula"]))
-		{
-			$cedula = sanitizeCedula($user["cedula"]);
-		}
+        if (isset($user["cedula"]))
+        {
+            $cedula = sanitizeCedula($user["cedula"]);
+        }
 
-		$statement->bindValue(':cedula',    	$cedula);
-		$statement->bindValue(':nombres',   	$user["nombres"]);
-		$statement->bindValue(':apellidos', 	$user["apellidos"]);
-		$statement->bindValue(':email', 		$user["email"]);
-		$statement->bindValue(':password_hash', $user["password_hash"]);
-		$statement->bindValue(':fecha_creado',  date(DATE_ATOM) );
-		
-		// Execute the INSERT statement
-		$result = $statement->execute();
-		
-		if ($result) 
-		{
-			return $this->getDB()->lastInsertId();
-		} 
-		else 
-		{
-			error_log('INSERT FAILED');
-			return 0;
-		}
-	}
+        $statement->bindValue(':cedula',    	$cedula);
+        $statement->bindValue(':nombres',   	$user["nombres"]);
+        $statement->bindValue(':apellidos', 	$user["apellidos"]);
+        $statement->bindValue(':email', 		$user["email"]);
+        $statement->bindValue(':password_hash', $user["password_hash"]);
+        $statement->bindValue(':fecha_creado',  date(DATE_ATOM) );
+        
+        // Execute the INSERT statement
+        $result = $statement->execute();
+        
+        if ($result) 
+        {
+            return $this->getDB()->lastInsertId();
+        } 
+        else 
+        {
+            error_log('INSERT FAILED');
+            return false;
+        }
+    }
 
 
 	public function isInGroup(&$user, $group)
@@ -853,55 +866,44 @@ class PersonaDataAccess extends DataAccess
 			throw new Exception("User ID not found in".print_r($user, true));
 		}
 
-		$query = new SelectQuery(DataAccessManager::get("flat_roles"));
-
-		$query->addClause(new WhereClause("role_id", $roleID));
-		$query->addClause(new WhereClause("user_id", $userID));
-
-		$existingRole = $query->executeAndReturnOne();
-
-		if ($existingRole)
-		{
-			return;
-		}
-		else
-		{
-			$toInsert = [
-				"role_id" => $roleID,
-				"user_id" => $userID,
-			];
-			
-			DataAccessManager::get("flat_roles")->insert($toInsert);
-			// DataAccessManager::get("role_person_relationships")->insert($toInsert);
-		}
+		$toInsert = [
+			"role_id" => $roleID,
+			"user_id" => $userID,
+		];
+		
+		DataAccessManager::get("flat_roles")->insert($toInsert);
+		// DataAccessManager::get("role_person_relationships")->insert($toInsert);
 	}
 
 	public function permissionsForUser($user)
-	{
-		$debug = false;
+{
+    $debug = false;
 
-		$roles = DataAccessManager::get("flat_roles")->rolesForUser($user);
+    if ($user === null) {
+        return [];
+    }
 
-		$permissions = [];
+    $roles = DataAccessManager::get("flat_roles")->rolesForUser($user);
 
-		foreach ($roles as $role)
-		{
-			$rolePermissions = DataAccessManager::get("role_permission_relationships")->permissionsForRole($role);
+    $permissions = [];
 
-			if ($debug)
-			{
-				gtk_log("`permissionsForUser`: - Role (".$role["name"].") - has permissions: ".print_r($rolePermissions, true));
-			}
+    foreach ($roles as $role)
+    {
+        $rolePermissions = DataAccessManager::get("role_permission_relationships")->permissionsForRole($role);
 
-			$permissions = array_merge($permissions, $rolePermissions);
-		}
+        if ($debug)
+        {
+            gtk_log("`permissionsForUser`: - Role (".$role["name"].") - has permissions: ".print_r($rolePermissions, true));
+        }
 
-		$permissions = array_unique($permissions);
-		sort($permissions);
+        $permissions = array_merge($permissions, $rolePermissions);
+    }
 
-		return $permissions;
-		
-	}
+    $permissions = array_unique($permissions);
+    sort($permissions);
+
+    return $permissions;
+}
 
 	public function hasOneOfPermissions($permissions, &$user, $closure = null)
 	{
@@ -1189,24 +1191,18 @@ class PersonaDataAccess extends DataAccess
 
             if ($email && $generatedPassword)
             {
-				if (method_exists($this, "sendWelcomeEmail"))
-				{
-					$this->sendWelcomeEmail($user, $generatedPassword);
-				}
-				else
-				{
-                	DataAccessManager::get("email_queue")->addDictionaryToQueue([
+                DataAccessManager::get("email_queue")->addDictionaryToQueue([
                     "to"      => $user["email"],
-                    "subject" => "Bienvenido",
-                    "body"    => "Bienvenido ".$user["nombres"]." ".$user["apellidos"].".\n\n".
+                    "subject" => "Bienvenido a Stonewood",
+                    "body"    => "Bienvenido a App Stonewood, ".$user["nombres"]." ".$user["apellidos"].".\n\n".
                                  "Su usuario es: ".$email."\n".
                                  "Su contraseña es: ".$generatedPassword."\n\n".
                                  "Gracias por confiar en nosotros.\n\n".
                                  "Saludos,\n".
-								 "Equipo del App"                
-                	]);
-				}
+                                "El equipo de Stonewood.",
+                ]);
             }
+
 	    }
         else
         {
@@ -1226,3 +1222,73 @@ class PersonaDataAccess extends DataAccess
 		return $userFromDB;
 	}
 }
+
+
+/*
+
+	public static function getCurrentSessionAndAllowRedirectBack($redirectBack = false)
+	{
+		static $didLookForSession = false;
+		static $isAuthenticated   = null;
+		static $currentSession    = null;
+
+		if (!$didLookForSession)
+		{
+			$debug = false;
+
+			$authToken = $_COOKIE['AuthCookie'];
+	
+			if ($debug) 
+			{ 
+				error_log("Searching for current user with `authToken`: ".$authToken); 
+			}
+		
+			$currentSession = DataAccessManager::get("session")->getSessionById($authToken);
+
+			if ($currentSession)
+			{
+				$isAuthenticated = DataAccessManager::get("session")->verifySession($currentSession);
+
+				if (!$isAuthenticated)
+				{
+					self::logout();
+				}
+			}
+
+			$didLookForSession = true;
+		}
+
+		return $currentSession;
+	}
+
+
+	public static function isAuthenticatedSession()
+	{
+		$authToken = $_COOKIE['AuthCookie'];
+
+		return self::isAuthenticatedSession($authToken);
+	}
+
+	public function isAuthenticatedToken($authToken)
+	{
+		$debug = false;
+	
+		if ($debug) 
+		{ 
+			error_log("Searching for current user with `authToken`: ".$authToken); 
+		}
+	
+		$currentSession = DataAccessManager::get("session")->getSessionById($authToken);
+
+		if ($currentSession)
+		{
+			$isAuthenticated = DataAccessManager::get("session")->verifySession($currentSession);
+
+			if (!$isAuthenticated)
+			{
+				self::logout();
+			}
+		}
+	}
+
+*/

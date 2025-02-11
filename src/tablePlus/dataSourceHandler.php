@@ -45,3 +45,4 @@ class TablePlusDataSourceHandlerPageSection extends TablePlusPage
         // HTML...
         return $this->columnAndFilterSelectionAreaForDataSource($dataSource);
     }
+}
