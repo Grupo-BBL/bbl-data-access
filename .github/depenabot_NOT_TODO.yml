@@ -1,0 +1,23 @@
+# Ultimo error aqui fue el siguiente...
+# Docker registries must specify a url in the format like `https://registry-host.io:5000` or `https://example.dkr.ecr.region.amazonaws.com`. Please don't include a path. - 
+# No se que significa bien...
+# Seria bueno poder corregir esto
+
+
+  dockerhub:
+    type: "docker-registry"
+    url: "https://index.docker.io/v1/"
+    username: "${{ secrets.ACCESS_TOKEN_USER }}"
+    password: "${{ secrets.ACCESS_TOKEN }}"
+
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "mucholove"
+    assignees:
+      - "mucholove"
+    registries:
+      - "dockerhub"

@@ -1,0 +1,26 @@
+version: 2
+registries:
+  github:
+    type: "git"
+    url: "https://github.com/"
+    username: "${{ secrets.ACCESS_TOKEN_USER }}"
+    password: "${{ secrets.ACCESS_TOKEN }}"
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    registries:
+      - "github"
+
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "mucholove"
+    assignees:
+      - "mucholove"
+    registries:
+      - "github"

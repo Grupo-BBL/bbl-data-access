@@ -237,7 +237,8 @@ public function currentUserHasOneOfPermissions($permissions)
 
 		$apiKey = null;
 
-
+		global $_COOKIE;
+		
 		if (isset($_SERVER[$httpTokenKey])) 
 		{
     		$apiKey = $_SERVER[$httpTokenKey];

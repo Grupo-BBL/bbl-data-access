@@ -68,7 +68,9 @@ class CreateUserHTMLPage extends GTKHTMLPage
         echo $this->renderMessages();
         ?>
 
-        <form action="/auth/create_user_handler.php" method="post">
+
+        <form action="/auth/create_user.php" method="post">
+
             <label for="cedula">Cédula:</label>
             <input type="text" id="cedula" name="cedula" required class="mt-1 block w-full border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
             <br>

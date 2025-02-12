@@ -1,0 +1,39 @@
+# .github/actions/database-services/action.yml
+name: 'Database Service Configurations'
+description: 'Standard database service configurations'
+
+outputs:
+  mysql-service:
+    description: "MySQL service configuration"
+    value: |
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: kanboard
+          MYSQL_USER: kanboard
+          MYSQL_PASSWORD: kanboard
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+  postgres-service:
+    description: "PostgreSQL service configuration"
+    value: |
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5

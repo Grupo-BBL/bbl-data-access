@@ -61,50 +61,54 @@ class GTKCookie
     /**
      * Extract root domain from host
      */
-    private function getRootDomain(string $host): string {
+    public function getRootDomain(string $host): string {
         // Remove port number if present
         $host = preg_replace('/:\d+$/', '', $host);
-
+    
         // Special handling for .local domains
-        if (str_ends_with($host, '.local')) 
-        {
+        if (str_ends_with($host, '.local')) {
             return '.' . $host;
         }
-
+    
         $parts = explode('.', $host);
         $count = count($parts);
         
+        // Define special TLDs
         $specialTlds = [
             'co.uk', 
             'com.au', 
             'co.nz', 
-            ".do", 
-            ".com.do",
-            ".net.do",
-            ".org.do",
-            ".web.do",
-            ".io",
-            ".es",
-            ".com.es",
-            ".net.es",
-            ".org.es",
-            ".web.es",
-            ".info",
-            ".com.info",
-            ".net.info",
-            ".org.info",
-            ".web.info",
-            ".biz",
-            ".com.biz",
-            ".net.biz",
-            ".org.biz",
+            "com.do", 
+            "net.do", 
+            "org.do", 
+            "web.do",
+            'io',
+            'es',
+            'com.es',
+            'net.es',
+            'org.es',
+            'web.es',
+            'info',
+            'com.info',
+            'net.info',
+            'org.info',
+            'web.info',
+            'biz',
+            'com.biz',
+            'net.biz',
+            'org.biz',
         ];
-
-        if ($count > 2 && in_array($parts[$count-2] . '.' . $parts[$count-1], $specialTlds)) {
-            return '.' . $parts[$count-3] . '.' . $parts[$count-2] . '.' . $parts[$count-1];
+    
+        // Handle special TLDs (e.g., ".com.do")
+        if ($count > 2) {
+            $lastTwoParts = $parts[$count-2] . '.' . $parts[$count-1];
+            if (in_array($lastTwoParts, $specialTlds)) {
+                // For .com.do and similar, treat the second-level domain as the root
+                return '.' . $parts[$count-3] . '.' . $lastTwoParts;
+            }
         }
-        
-        // Standard cases
+    
+        // Standard cases (last two parts)
         return '.' . implode('.', array_slice($parts, -2));
     }
 
@@ -225,6 +229,7 @@ class GTKCookie
 
     public static function deleteCurrentSessionCookie()
 	{
+        global $_COOKIE;
 		unset($_COOKIE['AuthCookie']);
 		setcookie('AuthCookie', '', -1, '/'); 
 	}
@@ -238,10 +243,12 @@ class GTKCookie
     }
 
     public function getSessionId(): ?string {
+        global $_COOKIE;
         return $_COOKIE[self::COOKIE_SESSION] ?? null;
     }
 
     public function getUserId(): ?string {
+        global $_COOKIE;
         return $_COOKIE[self::COOKIE_USER_ID] ?? null;
     }
 
@@ -256,6 +263,7 @@ class GTKCookie
 
     public static function getAuthCookie()
     {
+        global $_COOKIE;
         return $_COOKIE['AuthCookie'] ?? null;
     }
 
@@ -279,6 +287,7 @@ class GTKCookie
 
     public static function clearAuthCookie()
     {
+        global $_COOKIE;
         // Remove the debug die statement
         // die("Will clear AuthCookie");  // Remove this line
 
@@ -300,6 +309,7 @@ class GTKCookie
 
     public static function clearAllCookies()
     {
+        global $_COOKIE;
 		// Loop through all cookies and unset them
 		foreach ($_COOKIE as $cookie_name => $cookie_value) 
 		{

@@ -1,0 +1,30 @@
+# .github/actions/setup-php/action.yml
+name: 'Setup PHP Environment'
+description: 'Sets up PHP with extensions and installs dependencies'
+
+inputs:
+  php-version:
+    description: 'PHP version to use'
+    required: false
+    default: '8.2'
+  token:
+    description: 'GitHub token'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+        extensions: pdo_sqlite, pdo_mysql, pdo_pgsql, gd, ldap, mbstring, xml, zip
+        
+    - name: Validate composer.json
+      shell: bash
+      run: composer validate --no-check-publish
+        
+    - name: Install dependencies
+      shell: bash
+      run: |
+        composer install --prefer-dist --no-progress
