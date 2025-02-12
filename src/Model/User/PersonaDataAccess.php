@@ -640,62 +640,57 @@ class PersonaDataAccess extends DataAccess
 	}	
 
 	// public function createUserWithNoPassword($)
+
 	public function createUserIfNotExists($user)
-    {
-        
-        $existingUser = $this->getOne('email', $user['email']);
-        if ($existingUser) {
-            return false; 
-        }
+	{
+		if (!$this->where("email", $user['email']))
+		{
+			if ($user["password"])
+			{
+				$password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
+				$user['password_hash'] = $password_hash;
+			}
 
-        // Crear el nuevo usuario
-        if ($user["password"]) {
-            $password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
-            $user['password_hash'] = $password_hash;
-            unset($user['password']); // Eliminar el campo de contraseña en texto plano
-        }
-
-        $didInsert = $this->createUser($user);
-        return $didInsert; 
-    }
-
+			$this->createUser($user);		
+		}
+	}
 	
 	public function createUser($user)
-    {
-        $query = "INSERT INTO {$this->tableName()} 
-            (cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado)
-            VALUES
-            (:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo')";
-            
-        $statement = $this->getDB()->prepare($query);
+	{
+		$query = "INSERT INTO {$this->tableName()} 
+			(cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado)
+			VALUES
+			(:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo')";
+			
+		$statement = $this->getDB()->prepare($query);
 
-        $cedula = null;
+		$cedula = null;
 
-        if (isset($user["cedula"]))
-        {
-            $cedula = sanitizeCedula($user["cedula"]);
-        }
+		if (isset($user["cedula"]))
+		{
+			$cedula = sanitizeCedula($user["cedula"]);
+		}
 
-        $statement->bindValue(':cedula',    	$cedula);
-        $statement->bindValue(':nombres',   	$user["nombres"]);
-        $statement->bindValue(':apellidos', 	$user["apellidos"]);
-        $statement->bindValue(':email', 		$user["email"]);
-        $statement->bindValue(':password_hash', $user["password_hash"]);
-        $statement->bindValue(':fecha_creado',  date(DATE_ATOM) );
-        
-        // Execute the INSERT statement
-        $result = $statement->execute();
-        
-        if ($result) 
-        {
-            return $this->getDB()->lastInsertId();
-        } 
-        else 
-        {
-            error_log('INSERT FAILED');
-            return false;
-        }
-    }
+		$statement->bindValue(':cedula',    	$cedula);
+		$statement->bindValue(':nombres',   	$user["nombres"]);
+		$statement->bindValue(':apellidos', 	$user["apellidos"]);
+		$statement->bindValue(':email', 		$user["email"]);
+		$statement->bindValue(':password_hash', $user["password_hash"]);
+		$statement->bindValue(':fecha_creado',  date(DATE_ATOM) );
+		
+		// Execute the INSERT statement
+		$result = $statement->execute();
+		
+		if ($result) 
+		{
+			return $this->getDB()->lastInsertId();
+		} 
+		else 
+		{
+			error_log('INSERT FAILED');
+			return 0;
+		}
+	}
 
 
 	public function isInGroup(&$user, $group)

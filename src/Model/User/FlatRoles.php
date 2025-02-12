@@ -319,6 +319,7 @@ class FlatRoleDataAccess extends DataAccess
         return $results;
     }
 
+    ////////////////////////////////////////////// añadir roles para usuarios
     public function rolesUserCanAddTo($user)
     {
         $debug = false;
@@ -591,45 +592,49 @@ class FlatRoleDataAccess extends DataAccess
             throw new Exception("No permitido.");
         }
     }
-
-    public function rolesForUser($user)
-    {
-        $debug = false;
-
-        $roleRelations = $this->roleRelationsForUser($user);
-
-        $roleIDS = [];
-
-        foreach ($roleRelations as $roleRelation)
-        {
-            $roleID = $roleRelation["role_id"] ?? null;
-
-            if (!$roleID)
-            {
-                die("No role ID for role relation: ".print_r($roleRelation, true));
-                continue;
-            }
-            else
-            {
-                $roleIDS[] = $roleID;
-            }
-        }
-
-        $query = new SelectQuery(DataAccessManager::get("roles"));
-
-        $query->addClause(new WhereClause(
-            "id", "IN", $roleIDS
-        ));
-
-        $toReturn = $query->executeAndReturnAll();
-
-        if ($debug)
-        {
-            error_log("Returning `rolesForUser`: ".print_r($toReturn, true));
-        }
-
-        return $toReturn;
-    }
+  ////////////////////////////////////////////// roles para usuarios 
+  public function rolesForUser($user)
+  {
+      $debug = false;
+  
+      if ($user === null) {
+          return [];
+      }
+  
+      $roleRelations = $this->roleRelationsForUser($user);
+  
+      $roleIDS = [];
+  
+      foreach ($roleRelations as $roleRelation)
+      {
+          $roleID = $roleRelation["role_id"] ?? null;
+  
+          if (!$roleID)
+          {
+              die("No role ID for role relation: ".print_r($roleRelation, true));
+              continue;
+          }
+          else
+          {
+              $roleIDS[] = $roleID;
+          }
+      }
+  
+      $query = new SelectQuery(DataAccessManager::get("roles"));
+  
+      $query->addClause(new WhereClause(
+          "id", "IN", $roleIDS
+      ));
+  
+      $toReturn = $query->executeAndReturnAll();
+  
+      if ($debug)
+      {
+          error_log("Returning `rolesForUser`: ".print_r($toReturn, true));
+      }
+  
+      return $toReturn;
+  }
 
 
 
@@ -798,5 +803,25 @@ class FlatRoleDataAccess extends DataAccess
         }
 
         return $toReturn;
+    }
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// -- OTTO
+    public function assignRolesToUser($userID, $roles) {
+       
+        $currentRoles = $this->roleRelationsForUser($userID);
+
+       
+        $newRoles = array_filter($roles, function($role) use ($currentRoles) {
+            return !in_array($role, array_column($currentRoles, 'role_id'));
+        });
+
+   
+        foreach ($newRoles as $role) {
+            $this->insert([
+                'user_id' => $userID,
+                'role_id' => $role
+            ]);
+        }
+
+        return true;
     }
 }

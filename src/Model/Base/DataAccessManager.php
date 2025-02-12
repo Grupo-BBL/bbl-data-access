@@ -450,7 +450,7 @@ class DataAccessManager
 
     public function internalRegisterAccessor($key, $configuration) 
     {
-		$debug = false;
+		$debug = true;
 
 		if ($debug)
 		{
@@ -520,7 +520,6 @@ class DataAccessManager
         $this->resetAccessor($key);
     }
 
-// ... existing code ...
 
 	public static function updateConfigurationField($key, $field, $value)
 	{
@@ -548,16 +547,8 @@ class DataAccessManager
 		}
 	}
 
-    public function getDatabaseInstance($dbName) 
+	public function getDatabaseInstance($dbName) 
     {
-		// $debug = false;
-		/*
-		if (!$dbName)
-		{
-			return null;
-		}
-		*/
-
         if (!isset($this->databases[$dbName])) 
         {
             if (!isset($this->databaseConfigurations[$dbName])) 
@@ -575,122 +566,19 @@ class DataAccessManager
             $connection_string = $config["connectionString"];
             $username          = $config["userName"];
             $password          = $config["password"];
+            $options           = $config["connectionOptions"] ?? [];
 
             $this->databases[$dbName] = new PDO(
                 $connection_string,
                 $username, 
-                $password
+                $password,
+                $options
             );  
-
-			if (strpos($connection_string, "sqlite") !== false)
-			{
-				try
-				{
-
-					$this->databases[$dbName]->setAttribute(PDO::ATTR_TIMEOUT, 5000);	
-					
-					/*
-					Journal Mode: ACID (Atomicity, Consistency, Isolation, Durability) properties of database transactions
-
-						DELETE, TRUNCATE, PERSIST, WAL, MEMORY, OFF.
-						
-					DELETE   - DEFAULT - Creates a rollback journal file and deletes it when the transaction is complete.
-					PERSIST  - Creates a rollback journal file and leaves it on disk after the transaction is complete.
-					OFF      - No journal file is created. Transactions are atomic but not durable.
-					TRUNCATE - Similar to DELETE but truncates the journal file instead of deleting it.
-					MEMORY   - Fast. Keeps the journal in memory instead of on disk. Risky if power is lost. 
-					WAL      - Does a log, instead of a journal file. Can provide better concurrency and is often faster. Requires more disk space.
-					*/
-					$this->databases[$dbName]->exec("PRAGMA journal_mode = ".($config["journal_mode"] ?? "WAL"));
-					
-					
-					
-					/*
-				
-					Synchronous: How aggressively SQLite will write data to the disk.
-
-					Options: OFF, NORMAL, FULL (default), EXTRA
-					
-					NORMAL : SQLite will still sync at critical moments, but less often than FULL.
-					FULL   : Safer but slower. NORMAL improves performance while still maintaining good crash resistance.
-
-					*/
-					$this->databases[$dbName]->exec('PRAGMA synchronous = '.($config['synchronous'] ?? 'FULL'));
-					
-					/*
-					
-					Cache Size: PRAGMA cache_size = -20000
-
-
-						Meaning: This sets the number of database pages to hold in memory.
-						
-						Comparison: Larger cache sizes can improve performance by reducing disk I/O.
-
-						Default is 2000 kibibytes (KiB) or about 500 pages.
-						Note: The cache size is per database connection.
-
-						1 - Positive vs Negative values:
-
-							Positive value: Sets the cache size in pages
-							Negative value: Sets the cache size in kibibytes (KiB)
-
-
-						2 - Why use a negative value:
-
-							Convenience: It's often easier to think in terms of memory size (KiB) rather than number of pages
-							Persistence: A negative value makes the setting persistent across database connections
-
-						Comparison to positive values:
-
-						PRAGMA cache_size = 5000 would set the cache to 5000 pages
-						If the page size is 4096 bytes, this would be about 20 MB (similar to -20000)
-						However, this positive value setting wouldn't persist across connections
-
-					*/
-					$this->databases[$dbName]->exec('PRAGMA cache_size = '.($config["cache_size"] ?? '-20000'));
-
-
-					// $this->databases[$dbName]->exec('PRAGMA locking_mode = '.($config["locking_mode"] ?? "DEFERRED"));
-
-					/*
-					
-					Foreign Keys:
-					PRAGMA foreign_keys = ON
-
-					Meaning: This enables foreign key constraint enforcement.
-					
-					Comparison: By default, foreign key constraints are disabled in SQLite. 
-					
-
-					Enabling them ensures referential integrity but may slightly impact performance.
-
-					*/
-					$this->databases[$dbName]->exec('PRAGMA foreign_keys = '.($config["foreign_keys"] ?? 'OFF'));
-								
-				}
-				catch (Exception $e)
-				{
-					/*
-					So...I needed to give the database and the containing folder write permissions.
-					That's why I was getting the error.
-					Need to make it 777 or 774 - because form some god-forsaken reason...nothing else worked
-
-					*/
-					if (false)
-					{
-						echo "Connection string: ".$connection_string;
-						echo "Error setting journal mode: ".$e->getMessage();
-						die();
-					}
-					else
-					{
-						throw $e;
-					}
-				}
-			}
         }
         return $this->databases[$dbName];
     }
+
+
 
 	public function internalRegisterAlias($key, $alias) 
     {
@@ -896,7 +784,6 @@ class DataAccessManager
 		$potentialDataAccessorKey = $pathParts[0];
 		$toTryDataAccessorKey     = null;
 
-
 		if ($debug)
 		{
 			gtk_log("Potential data accessor key: ".$potentialDataAccessorKey);
@@ -955,34 +842,9 @@ class DataAccessManager
 	
 		if (!$user)
 		{
-
 			echo Glang::get("DataAccessManager/RequiresRedirect");
-
-			if ($debug)
-			{
-				error_log("Requires redirect. No user.");
-			}
-
-			
-			
-			if (in_array($requestPath, [
-				"auth/login.php", 
-				"auth/login",
-				"login",
-				"login.php",
-			]))
-			{
-				$loginPage = new GTKDefaultLoginPageDelegate();
-				global $GTK_SUPER_GLOBALS;
-				echo $loginPage->render(...$GTK_SUPER_GLOBALS);
-				return;
-			}
-			else
-			{
-				header("Refresh:3; url=/auth/login.php");
-			}
-
-
+			header("Refresh:3; url=/auth/login.php");
+			echo "Requires redirect. No user.";
 			exit();
 		}
 		else
@@ -991,33 +853,35 @@ class DataAccessManager
 		}
 	}
 
+	
+
 	public static function createTables()
-	{
-		self::getSingleton()->internalCreateTables();
-	}
+    {
+        self::getSingleton()->internalCreateTables();
+    }
 
-	public function internalCreateTables()
-	{
-		$debug = true;
+    public function internalCreateTables()
+    {
+        $debug = true;
 
-		foreach ($this->dataAccessorConstructions as $key => $construction)
-		{
-			$dataAccessor = $this->getDataAccessor($key, false);
+        foreach ($this->dataAccessorConstructions as $key => $construction)
+        {
+            $dataAccessor = $this->getDataAccessor($key, false);
     
-    		if (method_exists($dataAccessor, "createOrAnnounceTable"))
-    		{
-        		$dataAccessor->createOrAnnounceTable();
-    		}
-    		else
-    		{
-				if ($debug)
-				{
-					gtk_log("`createTables`: ".$key." - has no `createOrAnnounceTable` \n");
-				}
-    		}
+            if (method_exists($dataAccessor, "createOrAnnounceTable"))
+            {
+                $dataAccessor->createOrAnnounceTable();
+            }
+            else
+            {
+                if ($debug)
+                {
+                    gtk_log("`createTables`: ".$key." - has no `createOrAnnounceTable` \n");
+                }
+            }
     
-		}
-	}
+        }
+    }
 
 	public static function createPermissions($PERMISSION_ARRAYS_TO_ADD)
 	{

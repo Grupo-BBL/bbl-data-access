@@ -115,22 +115,6 @@ class GTKTableCellItemPresenter
     }
 }
 
-/*
-class MegaProject
-{
-    public int      $id;
-    public string   $name;
-    public string   $description;
-    public int      $organization_id;
-    public int      $owner_id;
-    public DateTime $deadline;
-    public int      $budgeted_time;
-    public DateTime $created_at;
-    public DateTime $updated_at;
-    public DateTime $deleted_at;
-}
-*/
-
 
 class DataAccess /* implements Serializable */
 {
@@ -280,14 +264,7 @@ class DataAccess /* implements Serializable */
         }
         else
         {
-            $primaryKeyMapping = $this->primaryKeyMapping();
-
-            if (!$primaryKeyMapping)
-            {
-                throw new Exception("No primary key mapping found for: ".$this->tableName());
-            }
-
-            return $primaryKeyMapping;
+            return $this->primaryKeyMapping();
         }
     }
 
@@ -373,11 +350,6 @@ class DataAccess /* implements Serializable */
             error_log("Will create or manage item: ".print_r($item, true));
         }
 
-        if (!is_array($item))
-        {
-            throw new Exception("Item is not an array: ".print_r($item, true));
-        }
-
         if (!$columnMappingKeyToSearchBy)
         {
             $columnMappingKeyToSearchBy = $this->defaulSearchByColumnMapping();
@@ -421,96 +393,9 @@ class DataAccess /* implements Serializable */
         }
     }
 
-    public function createOrAnnounceTable()
-    {
-        $debug = false;
 
-        if ($debug)
-        {
-            gtk_log("Will create table for: ".get_class($this));
-            gtk_log("Will use `createTable()` for: ".get_class($this));
-        }
 
-        $driverName = $this->getDB()->getAttribute(PDO::ATTR_DRIVER_NAME);
-
-        if (!$this->tableExists())
-        {
-            switch ($driverName)
-            {
-                case "mysql":
-                case "sqlsrv":
-                case "pgsql":
-                case "oci":
-                case "oci8":
-                case "odbc":
-                    gtk_log("CANNOT create table for: ".get_class($this));
-                    $sql = $this->createTableSQLString();
-                    gtk_log("Table is not created. Consider: ".$sql);
-                    return;
-                case "sqlite":
-                default:
-                    $this->createTable();
-                    return;
-
-                if ($debug)
-                {
-                    error_log("Did create table");
-                }
-            }
-        }
-        else
-        {
-            switch ($driverName)
-            {
-                case "mysql":
-                case "sqlsrv":
-                case "pgsql":
-                case "oci":
-                case "oci8":
-                case "odbc":
-                    $columns = $this->dataMapping->ordered;
-                    $missingColumns = [];
-        
-                    foreach ($columns as $columnMapping)
-                    {
-                        if (!$columnMapping->doesColumnExist($this->getPDO(), $this->tableName()))
-                        {
-                            $missingColumns[] = $columnMapping;
-                            // $columnMapping->addColumnIfNotExists($this->getPDO(), $this->tableName());
-                        }
-                    }
-        
-                    if (count($missingColumns))
-                    {
-                        gtk_log("On...`".get_class($this)."`: ".$this->tableName());
-                        gtk_log("Missing columns: ");
-        
-                        foreach ($missingColumns as $columns)
-                        {
-                            $columnSQL = $columnMapping->getCreateSQLForPDO($this->getPDO());
-                            $message = "For column: ".$columnMapping->phpKey." consider... ".$columnSQL;
-                            gtk_log($message);
-                        }
-        
-                        return;
-                    }
-                    return;
-                case "sqlite":
-                default:
-                    if ($debug)
-                    {
-                        error_log("Table already exists.");
-                        error_log("Creating missing columns...");
-                    }
-                    $columns = $this->dataMapping->ordered;
-                
-                    foreach ($columns as $columnMapping)
-                    {
-                        $columnMapping->addColumnIfNotExists($this->getPDO(), $this->tableName());
-                    }
-            }
-        }
-    }
+   
 
     public function createOrManagePermissionsWithKey($key)
     {
@@ -588,20 +473,6 @@ class DataAccess /* implements Serializable */
         if (!$this->dataMapping)
         {
             throw new Exception("DataMapping is not set for: ".get_class($this));
-        }
-
-        if (!$this->primaryKeyMapping())
-        {
-            $columnMapping = $this->dataMapping->columnMappingForKey("id");
-
-            if (!$columnMapping)
-            {
-                throw new Exception("Column mapping for id is not set for: ".get_class($this));
-            }
-            
-            $columnMapping->setAsPrimaryKey();
-            $columnMapping->setAsAutoIncrement();
-            $this->dataMapping->primaryKeyMapping = $columnMapping;
         }
         
         $this->dataMapping->setDataAccessor($this);

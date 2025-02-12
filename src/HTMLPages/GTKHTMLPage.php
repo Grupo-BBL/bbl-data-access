@@ -473,7 +473,7 @@ class GTKHTMLPage
 		$this->files      = $files;
 		$this->env 		  = $env;
 
-		if (!$this->allowsCache)
+		if ($this->allowsCache)
 		{
 			
 			session_start();

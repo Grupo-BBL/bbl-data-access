@@ -1,6 +1,6 @@
 {   
-    "name": ...,
-    "description": ...,
+    "name": "gtk/gtk-data-access",
+    "description": "My GTK Data Access Package",
     "type": "project",
     "license": "Private",
     "platform": {
@@ -14,7 +14,7 @@
         "gtk/gtk-data-access": {
             "type": "vcs",
             "url": "https://github.com/mucholove/gtk-data-access"
-        },
+        }
     },
     "require": {
         "php": "^8.1",
