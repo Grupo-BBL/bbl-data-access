@@ -514,6 +514,70 @@ public function currentUserHasOneOfPermissions($permissions)
 		return true;
 	}
 
+	public static function routeToPage($requestPath, $get, $post, $server, $cookie, $session, $files, $env)
+	{
+		$user = DataAccessManager::get("persona")->getCurrentUser();
+
+		$isLoginPath = in_array($requestPath, [
+			"/auth/login.php", 
+			"/auth/login",
+			"/login",
+			"/login.php",
+		]);
+
+		$isLogoutPath = in_array($requestPath, [
+			"/auth/logout.php",
+			"/auth/logout",
+			"/logout",
+			"/logout.php",
+		]);
+
+		if ($isLoginPath)
+		{
+			if ($user)
+			{
+				header("Location: /");
+				exit();
+			}
+			else
+			{
+				global $_GTK_SUPER_GLOBALS;
+				$loginPage = new GTKDefaultLoginPageDelegate();
+				echo $loginPage->render(...$_GTK_SUPER_GLOBALS);
+				return;
+			}
+		}
+
+
+		if ($isLogoutPath)
+		{
+			if ($user)
+			{
+				DataAccessManager::get("session")->clearCurrentSession();
+				die("Logged out");
+			}
+			else
+			{
+				header("Location: /auth/login.php");
+				exit();
+			}
+		}
+
+		$cleanPath = substr($requestPath, 1);
+
+		$dataAccessManager = DataAccessManager::getSingleton();
+
+		$toRender = $dataAccessManager->toRenderForPath($cleanPath, DataAccessManager::get("session")->getCurrentUser());
+
+		if ($toRender)
+		{
+		  renderPage($toRender);
+		}
+		else
+		{
+		  echo "<h1>404 - Not Found - ".$cleanPath."</h1>";
+		}
+	}
 	public function cancelSession($session)
 	{
 		$sql = "UPDATE {$this->tableName()} SET canceled = 1 WHERE session_guid = :session_guid";
