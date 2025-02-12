@@ -4,18 +4,26 @@
 class SessionDataAccess extends DataAccess 
 {
 	public function currentUserHasPermission($permission)
-	{
-		$currentUser = $this->getCurrentUser();
-		
-		return DataAccessManager::get("persona")->hasPermission($permission, $currentUser);
-	}
-	public function currentUserHasOneOfPermissions($permissions)
-	{
-		$currentUser = $this->getCurrentUser();
-		
-		return DataAccessManager::get("persona")->hasOneOfPermissions(
-			$permissions, $currentUser);
-	}
+{
+    $currentUser = $this->getCurrentUser();
+    
+    if ($currentUser === null) {
+        return false;
+    }
+
+    return DataAccessManager::get("persona")->hasPermission($permission, $currentUser);
+}
+
+public function currentUserHasOneOfPermissions($permissions)
+{
+    $currentUser = $this->getCurrentUser();
+    
+    if ($currentUser === null) {
+        return false;
+    }
+
+    return DataAccessManager::get("persona")->hasOneOfPermissions($permissions, $currentUser);
+}
 
 	public function currentUserIsInGroups($groups)
 	{
@@ -31,7 +39,11 @@ class SessionDataAccess extends DataAccess
 	}
 	public function clearCurrentSessioAndRedirectTo($sendWithRedirect = "/auth/login.php")
 	{
-		GTKCookie::clearAuthCookie();
+		// Loop through all cookies and unset them
+		foreach ($_COOKIE as $cookie_name => $cookie_value) 
+		{
+			setcookie($cookie_name, "", time() - 3600, "/");
+		}
 		
 		header("Cache-Control: no-cache, must-revalidate"); // HTTP 1.1
 		header("Pragma: no-cache");                         // HTTP 1.0
@@ -39,7 +51,7 @@ class SessionDataAccess extends DataAccess
 
 
 		// Notify successful logout and redirect to the home page after 3 seconds
-		$message     = 'Has cerrado sesión correctamente. En 3 segundos serás redirigido a la página de inicio.';
+		$message = 'Has cerrado sesión correctamente. En 3 segundos serás redirigido a la página de inicio.';
 		$redirectURL = '/index.php'; // Change this to the URL of your home page
 		
 		echo "<!DOCTYPE html>
@@ -225,8 +237,7 @@ class SessionDataAccess extends DataAccess
 
 		$apiKey = null;
 
-		global $_COOKIE;
-		
+
 		if (isset($_SERVER[$httpTokenKey])) 
 		{
     		$apiKey = $_SERVER[$httpTokenKey];
@@ -386,42 +397,39 @@ class SessionDataAccess extends DataAccess
 	}
 	
 	public function newSessionForUser($user)
-	{
-		$query = "INSERT INTO {$this->tableName()} 
-			(session_guid,  user_id, created_at, valid_until,  canceled)
-			VALUES
-			(:session_guid,  :user_id,  :created_at, :valid_until,  :canceled)";
-			
-		$statement = $this->getDB()->prepare($query);
-		
-		$session_value = uniqid();
+{
+    $query = "INSERT INTO {$this->tableName()} 
+        (session_guid, user_id, created_at, valid_until, canceled)
+        VALUES
+        (:session_guid, :user_id, :created_at, :valid_until, :canceled)";
+        
+    $statement = $this->getDB()->prepare($query);
+    
+    $session_value = uniqid();
 
-		$defaultSessionLength = 60 * 60 * 24 * 30; // 30 days
+    $defaultSessionLength = 60 * 60 * 24 * 30; // 30 days
 
-		$statement->bindValue(':session_guid', $session_value);
-		// $statement->bindValue(':user_id_column_name',   DataAccessManager::get("persona")->dbColumnNameForKey("id"));
-		$statement->bindValue(':user_id',     			DataAccessManager::get("persona")->valueForKey("id", $user));
-		$statement->bindValue(':created_at', 		 	date(DATE_ATOM));
-		$statement->bindValue(':valid_until', 			time() + $defaultSessionLength);
-		$statement->bindValue(':canceled', 	  			0);
-		
-		// Execute the INSERT statement
-		$result = $statement->execute();
-		
-		if ($result) 
-		{
-			GTKCookie::setAuthCookie($session_value);
-
-			return $session_value;
-		} 
-		else 
-		{
-			// INSERT failed
-			// Handle the error
-			echo 'INSERT FAILED';
-			return 0;
-		}
-	}
+    $statement->bindValue(':session_guid', $session_value);
+    $statement->bindValue(':user_id', DataAccessManager::get("persona")->valueForKey("id", $user));
+    $statement->bindValue(':created_at', date('Y-m-d H:i:s'));
+    $statement->bindValue(':valid_until', date('Y-m-d H:i:s', time() + $defaultSessionLength));
+    $statement->bindValue(':canceled', 0);
+    
+    // Execute the INSERT statement
+    $result = $statement->execute();
+    
+    if ($result) 
+    {
+        return $session_value;
+    } 
+    else 
+    {
+        // INSERT failed
+        // Handle the error
+        echo 'INSERT FAILED';
+        return 0;
+    }
+}
 
 	
 	
@@ -506,29 +514,6 @@ class SessionDataAccess extends DataAccess
 		return true;
 	}
 
-	public function cancelSession($session)
-	{
-		$sql = "UPDATE {$this->tableName()} SET canceled = 1 WHERE session_guid = :session_guid";
-
-		$statement = $this->getDB()->prepare($sql);
-
-		$statement->bindValue(':session_guid', $session["session_guid"]);
-
-		$result = $statement->execute();
-
-		if ($result) 
-		{
-			return true;
-		} 
-		else 
-		{
-			// INSERT failed
-			// Handle the error
-			// echo 'INSERT FAILED';
-			return false;
-		}
-	}
-
 	public static function routeToPage($requestPath, $get, $post, $server, $cookie, $session, $files, $env)
 	{
 		$user = DataAccessManager::get("persona")->getCurrentUser();
@@ -591,6 +576,28 @@ class SessionDataAccess extends DataAccess
 		else
 		{
 		  echo "<h1>404 - Not Found - ".$cleanPath."</h1>";
+		}
+	}
+	public function cancelSession($session)
+	{
+		$sql = "UPDATE {$this->tableName()} SET canceled = 1 WHERE session_guid = :session_guid";
+
+		$statement = $this->getDB()->prepare($sql);
+
+		$statement->bindValue(':session_guid', $session["session_guid"]);
+
+		$result = $statement->execute();
+
+		if ($result) 
+		{
+			return true;
+		} 
+		else 
+		{
+			// INSERT failed
+			// Handle the error
+			// echo 'INSERT FAILED';
+			return false;
 		}
 	}
 }
