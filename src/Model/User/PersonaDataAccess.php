@@ -642,18 +642,21 @@ class PersonaDataAccess extends DataAccess
 	// public function createUserWithNoPassword($)
 
 	public function createUserIfNotExists($user)
-	{
-		if (!$this->where("email", $user['email']))
-		{
-			if ($user["password"])
-			{
-				$password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
-				$user['password_hash'] = $password_hash;
-			}
+{
+    $existingUser = $this->where("email", $user['email']);
+    if (!$existingUser)
+    {
+        if ($user["password"])
+        {
+            $password_hash = password_hash($user['password'], PASSWORD_DEFAULT);
+            $user['password_hash'] = $password_hash;
+        }
 
-			$this->createUser($user);		
-		}
-	}
+        $this->createUser($user);
+        return $this->getDB()->lastInsertId(); // Devolver el ID del usuario recién creado
+    }
+    return $existingUser['id']; // Devolver el ID del usuario existente
+}
 	
 	public function createUser($user)
 	{
