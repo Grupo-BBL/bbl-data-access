@@ -805,23 +805,19 @@ class FlatRoleDataAccess extends DataAccess
         return $toReturn;
     }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// -- OTTO
-    public function assignRolesToUser($userID, $roles) {
-       
-        $currentRoles = $this->roleRelationsForUser($userID);
-
-       
-        $newRoles = array_filter($roles, function($role) use ($currentRoles) {
-            return !in_array($role, array_column($currentRoles, 'role_id'));
-        });
-
-   
-        foreach ($newRoles as $role) {
-            $this->insert([
-                'user_id' => $userID,
-                'role_id' => $role
-            ]);
-        }
-
-        return true;
+public function assignRolesToUser($userId, $roles)
+{
+    foreach ($roles as $roleId) {
+        $relationship = [
+            'user_id' => $userId,
+            'role_id' => $roleId,
+            'is_active' => true,
+            'date_created' => date('Y-m-d H:i:s'),
+            'date_modified' => date('Y-m-d H:i:s')
+        ];
+        $this->insert($relationship);
     }
+    return true;
+}
+    
 }
