@@ -17,22 +17,35 @@ class PaginaParaAsignar extends GTKHTMLPage
     public function processPost()
     {
         $uno = $_POST['uno'];
-        $mucho = $_POST['mucho'];
-        $action = $_POST['action'];
+        $mucho = $_POST['mucho'] ?? null;
+        $action = $_POST['action'] ?? null;
 
         $unoDataAccess = DataAccessManager::get($this->NombreDataAccessParaUno);
-        $muchoDataAccess = DataAccessManager::get($this->NombreDataAccessParaMuchos);
+        $relationDataAccess = DataAccessManager::get('role_permission_relationships');
 
-        if ($action == 'assign') {
-            $result = $unoDataAccess->assignPermissionsToRole($uno, [$mucho]);
-        } else if ($action == 'remove') {
-            $result = $unoDataAccess->removeFrom($uno, [$mucho]);
+        if ($this->NombreDataAccessParaUno == 'roles' && $this->NombreDataAccessParaMuchos == 'permissions') {
+            // Asignar permisos a roles
+            if ($action == 'assign') {
+                $result = $relationDataAccess->assignPermissionsToRole($uno, [$mucho]);
+            } else if ($action == 'remove') {
+                $result = $unoDataAccess->removePermissionFromRole($uno, ['id' => $mucho]);
+            }
+        } else if ($this->NombreDataAccessParaUno == 'persona' && $this->NombreDataAccessParaMuchos == 'roles') {
+            // Asignar roles a usuarios
+            $flatRoleDataAccess = DataAccessManager::get('flat_roles');
+            if ($action == 'assign') {
+                $result = $flatRoleDataAccess->assignRolesToUser($uno, [$mucho]);
+            } else if ($action == 'remove') {
+                $result = $flatRoleDataAccess->removeRolesFromUser($uno, [$mucho]);
+            }
         }
 
-        if ($result) {
-            $this->messages[] = json_encode(['success' => true, 'message' => 'Operación realizada exitosamente.']);
-        } else {
-            $this->messages[] = json_encode(['success' => false, 'message' => 'Error al realizar la operación.']);
+        if (isset($result)) {
+            if ($result) {
+                $this->messages[] = json_encode(['Accion realizada exitosamente.']);
+            } else {
+                $this->messages[] = json_encode(['Error al realizar la operación.']);
+            }
         }
     }
 
@@ -65,9 +78,12 @@ class PaginaParaAsignar extends GTKHTMLPage
 
     public function hasRelation($uno, $mucho)
     {
-        $unoDataAccess = DataAccessManager::get($this->NombreDataAccessParaUno);
-        $relations = $unoDataAccess->getPermissionsForRole($uno);
-        return in_array($mucho, array_column($relations, 'id'));
+        if ($this->NombreDataAccessParaUno == 'roles' && $this->NombreDataAccessParaMuchos == 'permissions') {
+            $relations = DataAccessManager::get('role_permission_relationships')->permissionRelationsForRole($uno);
+        } else if ($this->NombreDataAccessParaUno == 'persona' && $this->NombreDataAccessParaMuchos == 'roles') {
+            $relations = DataAccessManager::get('flat_roles')->roleRelationsForUser($uno);
+        }
+        return in_array($mucho, array_column($relations, 'permission_id'));
     }
 
     public function filterUnique($items)
@@ -93,6 +109,9 @@ class PaginaParaAsignar extends GTKHTMLPage
         $unos = $unoDataAccess->selectAll();
         $muchos = $this->filterUnique($muchosDataAccess->selectAll());
 
+        $selectedUno = $_POST['uno'] ?? null;
+        $assignedMuchos = $selectedUno ? DataAccessManager::get('role_permission_relationships')->permissionRelationsForRole($selectedUno) : [];
+
         ob_start(); ?>
     
         <div class="container mx-auto mt-4">
@@ -103,26 +122,19 @@ class PaginaParaAsignar extends GTKHTMLPage
             <form action="<?php echo $_SERVER['REQUEST_URI'] ?? ''; ?>" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div class="mb-4">
                     <label for="uno" class="block text-gray-700 text-sm font-bold mb-2"><?php echo ucfirst($this->NombreDataAccessParaUno); ?>:</label>
-                    <select id="uno" name="uno" required class="mt-1 block w-full border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <select id="uno" name="uno" required class="mt-1 block w-full border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" onchange="this.form.submit()">
+                        <option value="">Seleccione un <?php echo ucfirst($this->NombreDataAccessParaUno); ?></option>
                         <?php foreach ($unos as $uno): ?>
-                            <option value="<?php echo htmlspecialchars($uno['id']); ?>"><?php echo htmlspecialchars($uno['name']); ?></option>
+                            <option value="<?php echo htmlspecialchars($uno['id']); ?>" <?php echo $selectedUno == $uno['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($this->NombreDataAccessParaUno == 'persona' ? $uno['email'] : $uno['name']); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="mb-4">
-                    <label for="mucho" class="block text-gray-700 text-sm font-bold mb-2"><?php echo ucfirst($this->NombreDataAccessParaMuchos); ?>:</label>
-                    <select id="mucho" name="mucho" required class="mt-1 block w-full border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                        <?php foreach ($muchos as $mucho): ?>
-                            <option value="<?php echo htmlspecialchars($mucho['id']); ?>"><?php echo htmlspecialchars($mucho['name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <input type="submit" name="action" value="assign" class="px-8 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 rounded">
-                    <input type="submit" name="action" value="remove" class="px-8 w-full bg-red-500 hover:bg-red-700 text-white font-bold py-2 rounded mt-2">
-                </div>
+                <?php if ($selectedUno): ?>
+                <!-- Aquí puedes agregar más contenido si es necesario -->
+                <?php endif; ?>
             </form>
 
+            <?php if ($selectedUno): ?>
             <h2 class="text-xl font-bold mb-4"><?php echo ucfirst($this->NombreDataAccessParaMuchos); ?> Asignados</h2>
             <table class="min-w-full bg-white">
                 <thead>
@@ -136,15 +148,15 @@ class PaginaParaAsignar extends GTKHTMLPage
                         <tr>
                             <td class="border px-4 py-2"><?php echo htmlspecialchars($mucho['name']); ?></td>
                             <td class="border px-4 py-2">
-                                <?php if ($this->hasRelation($uno, $mucho['id'])): ?>
+                                <?php if ($this->hasRelation($selectedUno, $mucho['id'])): ?>
                                     <form action="<?php echo $_SERVER['REQUEST_URI'] ?? ''; ?>" method="POST">
-                                        <input type="hidden" name="uno" value="<?php echo htmlspecialchars($uno['id']); ?>">
+                                        <input type="hidden" name="uno" value="<?php echo htmlspecialchars($selectedUno); ?>">
                                         <input type="hidden" name="mucho" value="<?php echo htmlspecialchars($mucho['id']); ?>">
                                         <input type="submit" name="action" value="remove" class="px-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 rounded">
                                     </form>
                                 <?php else: ?>
                                     <form action="<?php echo $_SERVER['REQUEST_URI'] ?? ''; ?>" method="POST">
-                                        <input type="hidden" name="uno" value="<?php echo htmlspecialchars($uno['id']); ?>">
+                                        <input type="hidden" name="uno" value="<?php echo htmlspecialchars($selectedUno); ?>">
                                         <input type="hidden" name="mucho" value="<?php echo htmlspecialchars($mucho['id']); ?>">
                                         <input type="submit" name="action" value="assign" class="px-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 rounded">
                                     </form>
@@ -154,6 +166,7 @@ class PaginaParaAsignar extends GTKHTMLPage
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php endif; ?>
         </div>
     
         <?php return ob_get_clean();
