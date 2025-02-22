@@ -655,7 +655,7 @@ class PersonaDataAccess extends DataAccess
         $this->createUser($user);
         return $this->getDB()->lastInsertId(); // Devolver el ID del usuario recién creado
     }
-    return $existingUser['id']; // Devolver el ID del usuario existente
+   
 }
 	
 	public function createUser($user)
@@ -1219,6 +1219,26 @@ class PersonaDataAccess extends DataAccess
 
 		return $userFromDB;
 	}
+
+	public function createUserWithRoles($userData, $roleIds)
+    {
+        // Crear el usuario si no existe
+        $userId = $this->createUserIfNotExists($userData);
+
+        if (!$userId) {
+            return ['success' => false, 'message' => 'Correo Invalido O Duplicado.'];
+        }
+
+        // Asignar roles al usuario
+        $flatRoleDataAccess = DataAccessManager::get('flat_roles');
+        $roleResult = $flatRoleDataAccess->assignRolesToUser($userId, $roleIds);
+
+        if ($roleResult) {
+            return ['success' => true, 'message' => 'Usuario y roles asignados exitosamente.'];
+        } else {
+            return ['success' => false, 'message' => 'Usuario creado, pero error al asignar los roles.'];
+        }
+    }
 }
 
 

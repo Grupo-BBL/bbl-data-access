@@ -17,87 +17,49 @@ class CreateUserHTMLPage extends GTKHTMLPage
         $spreadsheet = IOFactory::load($filePath);
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray();
-
+    
         $personaDataAccess = DataAccessManager::get('persona');
-        $flatRoleDataAccess = DataAccessManager::get('flat_roles');
-
+    
         foreach ($rows as $index => $row) {
-            if ($index == 0) continue; // Skip header row
-
-            $cedula = $row[0];
-            $nombres = $row[1];
-            $apellidos = $row[2];
-            $email = $row[3];
-            $password = $row[4];
-            $roleId = $row[5];
-
+            if ($index == 0) continue; 
+    
             $userData = [
-                'cedula' => $cedula,
-                'nombres' => $nombres,
-                'apellidos' => $apellidos,
-                'email' => $email,
-                'password' => $password
+                'cedula' => $row[0],
+                'nombres' => $row[1],
+                'apellidos' => $row[2],
+                'email' => $row[3],
+                'password' => $row[4]
             ];
-
-            // Crear el usuario y obtener el ID del usuario recién creado
-            $userId = $personaDataAccess->createUserIfNotExists($userData);
-            error_log("User ID: " . $userId); // Depuración
-
-            if ($userId) {
-                // Asignar el rol al usuario
-                $roleResult = $flatRoleDataAccess->assignRolesToUser($userId, [$roleId]);
-                error_log("Role Assignment Result: " . json_encode($roleResult)); // Depuración
-
-                if ($roleResult) {
-                    $this->messages[] = json_encode(['success' => true, 'message' => 'Usuario y rol asignado exitosamente.']);
-                } else {
-                    $this->messages[] = json_encode(['success' => false, 'message' => 'Usuario creado, pero error al asignar el rol.']);
-                }
-            } else {
-                $this->messages[] = json_encode(['success' => false, 'message' => 'Error al Crear el Usuario.']);
-            }
+            $roleIds = explode(',', $row[5]);
+    
+            // Llamar al nuevo método en personaDataAccess
+            $result = $personaDataAccess->createUserWithRoles($userData, $roleIds);
+    
+            // Registrar el resultado
+            $this->messages[] = json_encode($result);
         }
     }
 
     private function processFormInput($users)
     {
         $personaDataAccess = DataAccessManager::get('persona');
-        $flatRoleDataAccess = DataAccessManager::get('flat_roles');
 
-        foreach ($users as $user) {
-            $cedula = $user['cedula'];
-            $nombres = $user['nombres'];
-            $apellidos = $user['apellidos'];
-            $email = $user['email'];
-            $password = $user['password'];
-            $roleId = $user['role_id'];
+      foreach ($users as $user) {
+         $userData = [
+            'cedula' => $user['cedula'],
+            'nombres' => $user['nombres'],
+            'apellidos' => $user['apellidos'],
+            'email' => $user['email'],
+            'password' => $user['password']
+        ];
+        $roleIds = $user['role_ids'];
 
-            $userData = [
-                'cedula' => $cedula,
-                'nombres' => $nombres,
-                'apellidos' => $apellidos,
-                'email' => $email,
-                'password' => $password
-            ];
+        
+        $result = $personaDataAccess->createUserWithRoles($userData, $roleIds);
 
-            // Crear el usuario y obtener el ID del usuario recién creado
-            $userId = $personaDataAccess->createUserIfNotExists($userData);
-            error_log("User ID: " . $userId); // Depuración
-
-            if ($userId) {
-                // Asignar el rol al usuario
-                $roleResult = $flatRoleDataAccess->assignRolesToUser($userId, [$roleId]);
-                error_log("Role Assignment Result: " . json_encode($roleResult)); // Depuración
-
-                if ($roleResult) {
-                    $this->messages[] = json_encode(['success' => true, 'message' => 'Usuario y rol asignado exitosamente.']);
-                } else {
-                    $this->messages[] = json_encode(['success' => false, 'message' => 'Usuario creado, pero error al asignar el rol.']);
-                }
-            } else {
-                $this->messages[] = json_encode(['success' => false, 'message' => 'Error al Crear el Usuario.']);
-            }
-        }
+      
+        $this->messages[] = json_encode($result);
+    }
     }
 
     public function renderMessages()
@@ -143,8 +105,8 @@ class CreateUserHTMLPage extends GTKHTMLPage
                 padding: 20px;
             }
             .alert {
-                background-color: #f8d7da;
-                color: #721c24;
+                background-color:rgb(255, 252, 252);
+                color:rgb(0, 0, 0);
                 border: 1px solid #f5c6cb;
                 padding: 10px;
                 margin-bottom: 20px;
@@ -233,13 +195,13 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             <input type="password" name="users[0][password]" required>
                         </div>
                         <div class="form-group">
-                            <label for="role_id">Rol:</label>
-                            <select name="users[0][role_id]" required>
-                                <option value="">Seleccione un Rol</option>
-                                <?php foreach ($roles as $role): ?>
-                                    <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label for="role_ids">Roles:</label>
+                            <?php foreach ($roles as $role): ?>
+                                <div>
+                                    <input type="checkbox" name="users[0][role_ids][]" value="<?php echo htmlspecialchars($role['id']); ?>">
+                                    <?php echo htmlspecialchars($role['name']); ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
@@ -284,13 +246,13 @@ class CreateUserHTMLPage extends GTKHTMLPage
                         <input type="password" name="users[${userFormCount}][password]" required>
                     </div>
                     <div class="form-group">
-                        <label for="role_id">Rol:</label>
-                        <select name="users[${userFormCount}][role_id]" required>
-                            <option value="">Seleccione un Rol</option>
-                            <?php foreach ($roles as $role): ?>
-                                <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label for="role_ids">Roles:</label>
+                        <?php foreach ($roles as $role): ?>
+                            <div>
+                                <input type="checkbox" name="users[${userFormCount}][role_ids][]" value="<?php echo htmlspecialchars($role['id']); ?>">
+                                <?php echo htmlspecialchars($role['name']); ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 `;
                 userFormsContainer.appendChild(newUserForm);
@@ -321,7 +283,13 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             document.querySelector(`input[name="users[${index}][apellidos]"]`).value = row[2];
                             document.querySelector(`input[name="users[${index}][email]"]`).value = row[3];
                             document.querySelector(`input[name="users[${index}][password]"]`).value = row[4];
-                            document.querySelector(`select[name="users[${index}][role_id]"]`).value = row[5];
+                            const roleIds = row[5].split(',');
+                            roleIds.forEach(roleId => {
+                                const checkbox = document.querySelector(`input[name="users[${index}][role_ids][]"][value="${roleId}"]`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                }
+                            });
                         });
                     };
                     reader.readAsArrayBuffer(file);
@@ -332,3 +300,6 @@ class CreateUserHTMLPage extends GTKHTMLPage
         <?php return ob_get_clean();
     }
 }
+
+
+
