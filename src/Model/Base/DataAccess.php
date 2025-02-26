@@ -1118,7 +1118,7 @@ class DataAccess /* implements Serializable */
 
         if ($tableKey)
         {
-            $dbColumnNameToJoinOn = DAM::get($tableNameWithKey)->dbColumnNameForKey($tableKey, true);
+            $dbColumnNameToJoinOn = DataAccessManager::get($tableNameWithKey)->dbColumnNameForKey($tableKey, true);
         }
         else
         {
@@ -1130,7 +1130,7 @@ class DataAccess /* implements Serializable */
             $array = explode(".", $tableNameWithKey);
             $tableName = $array[0];
             $otherTableKey = $array[1];
-            $dbColumnNameToJoinOn = DAM::get($tableName)->dbColumnNameForKey($otherTableKey, true);
+            $dbColumnNameToJoinOn = DataAccessManager::get($tableName)->dbColumnNameForKey($otherTableKey, true);
         }
 
         return $dbColumnName." = ".$dbColumnNameToJoinOn;
@@ -2118,6 +2118,35 @@ class DataAccess /* implements Serializable */
         $statement = $this->getPDO()->prepare($sql);
 
         $statement->bindValue(":id", '%'.$identifier.'%');
+
+        $statement->execute();
+    }
+
+    function deleterelation($conditions)
+    {
+        $sql = "DELETE FROM " . $this->tableName() . " WHERE ";
+        $params = [];
+        $clauses = [];
+
+        foreach ($conditions as $columnKey => $value) {
+            $columnName = $this->dbColumnNameForKey($columnKey);
+
+            if (!$columnName) {
+                gtk_log("No column name found for key: $columnKey");
+                die("Error de sistema.");
+            }
+
+            $clauses[] = $columnName . " = :" . $columnKey;
+            $params[":" . $columnKey] = $value;
+        }
+
+        $sql .= implode(" AND ", $clauses);
+
+        $statement = $this->getPDO()->prepare($sql);
+
+        foreach ($params as $param => $value) {
+            $statement->bindValue($param, $value);
+        }
 
         $statement->execute();
     }
