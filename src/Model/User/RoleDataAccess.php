@@ -153,7 +153,7 @@ class RoleDataAccess extends DataAccess
             return $user["gtk_cache"]["roles"];
         }
 
-        $roleRelatiosnForUser = DataAccessManager::get("flat_roles")->roleRelationsForUser($user);
+        $roleRelatiosnForUser = DataAccessManager::get("role_person_relationships")->roleRelationsForUser($user);
 
         $roleIDS = [];
 
