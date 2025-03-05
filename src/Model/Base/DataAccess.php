@@ -2213,6 +2213,35 @@ abstract class DataAccess /* implements Serializable */
 
         $statement->execute();
     }
+    
+    function deleterelation($conditions)
+    {
+        $sql = "DELETE FROM " . $this->tableName() . " WHERE ";
+        $params = [];
+        $clauses = [];
+
+        foreach ($conditions as $columnKey => $value) {
+            $columnName = $this->dbColumnNameForKey($columnKey);
+
+            if (!$columnName) {
+                gtk_log("No column name found for key: $columnKey");
+                die("Error de sistema.");
+            }
+
+            $clauses[] = $columnName . " = :" . $columnKey;
+            $params[":" . $columnKey] = $value;
+        }
+
+        $sql .= implode(" AND ", $clauses);
+
+        $statement = $this->getPDO()->prepare($sql);
+
+        foreach ($params as $param => $value) {
+            $statement->bindValue($param, $value);
+        }
+
+        $statement->execute();
+    }
 
     // MARK: - COUNT
 
