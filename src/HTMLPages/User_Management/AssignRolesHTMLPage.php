@@ -13,7 +13,7 @@ class AssignRolesHTMLPage extends GTKHTMLPage
             $roles = explode(',', $roles);
         }
 
-        $flatRoleDataAccess = DataAccessManager::get('flat_roles');
+        $flatRoleDataAccess = DataAccessManager::get('role_person_relationships');
 
         $result = $flatRoleDataAccess->assignRolesToUser($user, $roles);
 

@@ -44,7 +44,7 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
 		"class"       => "RoleDataAccess", 
 		"db"          => "appDB",
 	],
-	"flat_roles" => [
+	"role_person_relationships" => [
 		"class"       => "FlatRoleDataAccess", 
 		"db"          => "appDB",
 	],
