@@ -50,6 +50,4 @@ class OptionsAccessManager
 }
 
 
-class_alias('OptionsAccessManager', 'OAM');
-
 

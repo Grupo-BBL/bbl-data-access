@@ -300,6 +300,3 @@ class CreateUserHTMLPage extends GTKHTMLPage
         <?php return ob_get_clean();
     }
 }
-
-
-

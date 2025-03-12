@@ -44,9 +44,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Unit tests with MySQL
-        run: ./vendor/bin/phpunit -c tests/units.mysql.xml
+        run: XDEBUG_MODE=coverage ./vendor/bin/phpunit -c tests/units.mysql.xml --coverage-clover coverage.xml
         env:
           DB_HOSTNAME: 127.0.0.1
           DB_USERNAME: kanboard
           DB_PASSWORD: kanboard
           DB_NAME: kanboard
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
