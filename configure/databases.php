@@ -57,11 +57,6 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
 		"db" 		  => "appDB",
 		"tableName"   => "role_permission_relationships",
 	],
-	"reglas_registros" => [
-        "class" => "ReglasRegistrosDataAccess",
-        "db" => "appDB",
-		"tableName"   => "reglas_registros",
-    ],
 
 	// "permission_person_relationships";
 	//////////////////////////////////////////
