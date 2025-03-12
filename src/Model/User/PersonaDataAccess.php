@@ -656,7 +656,7 @@ class PersonaDataAccess extends DataAccess
         $this->createUser($user);
         return $this->getDB()->lastInsertId(); // Devolver el ID del usuario recién creado
     }
-    return $existingUser['id']; // Devolver el ID del usuario existente
+
 }
 	
 	public function createUser($user)
@@ -867,25 +867,17 @@ class PersonaDataAccess extends DataAccess
     
 		$query = new SelectQuery(DataAccessManager::get("role_person_relationships"));
 
-		$query->addClause(new WhereClause("role_id", $roleID));
-		$query->addClause(new WhereClause("user_id", $userID));
 
-		$existingRole = $query->executeAndReturnOne();
+		$toInsert = [
+			"role_id" => $roleID,
+			"user_id" => $userID,
+		];
+		
 
-		if ($existingRole)
-		{
-			return;
-		}
-		else
-		{
-			$toInsert = [
-				"role_id" => $roleID,
-				"user_id" => $userID,
-			];
-			
-			DataAccessManager::get("role_person_relationships")->insert($toInsert);
-			// DataAccessManager::get("role_person_relationships")->insert($toInsert);
-		}
+		DataAccessManager::get("role_person_relationships")->insert($toInsert);
+
+		// DataAccessManager::get("role_person_relationships")->insert($toInsert);
+
 	}
 
 	public function permissionsForUser($user)
@@ -895,8 +887,12 @@ class PersonaDataAccess extends DataAccess
     if ($user === null) {
         return [];
     }
-    
+
+
+
     $roles = DataAccessManager::get("role_person_relationships")->rolesForUser($user);
+
+
 
     $permissions = [];
 
@@ -1202,6 +1198,7 @@ class PersonaDataAccess extends DataAccess
 
             if ($email && $generatedPassword)
             {
+
 				if ($email && $generatedPassword)
 				{
 					if (method_exists($this, "sendWelcomeEmail"))
@@ -1222,6 +1219,7 @@ class PersonaDataAccess extends DataAccess
 			if ($userFromDB && $email && DAM::get("person_email_aliases")) {
 				DAM::get("person_email_aliases")->addEmailForPerson($userFromDB['id'], $email, true);
 			}
+
 	    }
         else
         {
@@ -1255,12 +1253,28 @@ class PersonaDataAccess extends DataAccess
 
 		return $userFromDB;
 	}
-	/**
-	 * Get all email addresses for a user
-	 * 
-	 * @param array|int $user The user array or user ID
-	 * @return array List of email addresses
-	 */
+
+
+	public function createUserWithRoles($userData, $roleIds)
+    {
+        // Crear el usuario si no existe
+        $userId = $this->createUserIfNotExists($userData);
+
+        if (!$userId) {
+            return ['success' => false, 'message' => 'Correo Invalido O Duplicado.'];
+        }
+
+        // Asignar roles al usuario
+        $flatRoleDataAccess = DataAccessManager::get('role_person_relationships');
+        $roleResult = $flatRoleDataAccess->assignRolesToUser($userId, $roleIds);
+
+        if ($roleResult) {
+            return ['success' => true, 'message' => 'Usuario y roles asignados exitosamente.'];
+        } else {
+            return ['success' => false, 'message' => 'Usuario creado, pero error al asignar los roles.'];
+        }
+    }
+
 	public function getAllEmailsForUser($user)
 	{
 		$userId = is_array($user) ? $user['id'] : $user;
@@ -1321,6 +1335,7 @@ class PersonaDataAccess extends DataAccess
 		
 		return true;
 	}
+
 }
 
 

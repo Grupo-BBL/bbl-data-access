@@ -1,46 +1,65 @@
 <?php
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 class CreateUserHTMLPage extends GTKHTMLPage
 {
     public function processPost()
     {
-        $users = $_POST['users'];
-        $personaDataAccess = DataAccessManager::get('persona');
-        $flatRoleDataAccess = DataAccessManager::get('flat_roles');
-
-        foreach ($users as $user) {
-            $cedula = $user['cedula'];
-            $nombres = $user['nombres'];
-            $apellidos = $user['apellidos'];
-            $email = $user['email'];
-            $password = $user['password'];
-            $roleId = $user['role_id'];
-
-            $userData = [
-                'cedula' => $cedula,
-                'nombres' => $nombres,
-                'apellidos' => $apellidos,
-                'email' => $email,
-                'password' => $password
-            ];
-
-            // Crear el usuario y obtener el ID del usuario recién creado
-            $userId = $personaDataAccess->createUserIfNotExists($userData);
-            error_log("User ID: " . $userId); // Depuración
-
-            if ($userId) {
-                // Asignar el rol al usuario
-                $roleResult = $flatRoleDataAccess->assignRolesToUser($userId, [$roleId]);
-                error_log("Role Assignment Result: " . json_encode($roleResult)); // Depuración
-
-                if ($roleResult) {
-                    $this->messages[] = json_encode(['success' => true, 'message' => 'Usuario y rol asignado exitosamente.']);
-                } else {
-                    $this->messages[] = json_encode(['success' => false, 'message' => 'Usuario creado, pero error al asignar el rol.']);
-                }
-            } else {
-                $this->messages[] = json_encode(['success' => false, 'message' => 'Error al Crear el Usuario.']);
-            }
+        if (isset($_FILES['excel_file']) && $_FILES['excel_file']['error'] == UPLOAD_ERR_OK) {
+            $this->processExcelFile($_FILES['excel_file']['tmp_name']);
+        } else {
+            $this->processFormInput($_POST['users']);
         }
+    }
+
+    private function processExcelFile($filePath)
+    {
+        $spreadsheet = IOFactory::load($filePath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+    
+        $personaDataAccess = DataAccessManager::get('persona');
+    
+        foreach ($rows as $index => $row) {
+            if ($index == 0) continue; 
+    
+            $userData = [
+                'cedula' => $row[0],
+                'nombres' => $row[1],
+                'apellidos' => $row[2],
+                'email' => $row[3],
+                'password' => $row[4]
+            ];
+            $roleIds = explode(',', $row[5]);
+    
+            // Llamar al nuevo método en personaDataAccess
+            $result = $personaDataAccess->createUserWithRoles($userData, $roleIds);
+    
+            // Registrar el resultado
+            $this->messages[] = json_encode($result);
+        }
+    }
+
+    private function processFormInput($users)
+    {
+        $personaDataAccess = DataAccessManager::get('persona');
+
+      foreach ($users as $user) {
+         $userData = [
+            'cedula' => $user['cedula'],
+            'nombres' => $user['nombres'],
+            'apellidos' => $user['apellidos'],
+            'email' => $user['email'],
+            'password' => $user['password']
+        ];
+        $roleIds = $user['role_ids'];
+
+        
+        $result = $personaDataAccess->createUserWithRoles($userData, $roleIds);
+
+      
+        $this->messages[] = json_encode($result);
+    }
     }
 
     public function renderMessages()
@@ -86,8 +105,8 @@ class CreateUserHTMLPage extends GTKHTMLPage
                 padding: 20px;
             }
             .alert {
-                background-color: #f8d7da;
-                color: #721c24;
+                background-color:rgb(255, 252, 252);
+                color:rgb(0, 0, 0);
                 border: 1px solid #f5c6cb;
                 padding: 10px;
                 margin-bottom: 20px;
@@ -152,7 +171,7 @@ class CreateUserHTMLPage extends GTKHTMLPage
             echo $this->renderMessages();
             ?>
 
-            <form action="<?php echo $_SERVER['REQUEST_URI'] ?? ''; ?>" method="POST" id="userForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <form action="<?php echo $_SERVER['REQUEST_URI'] ?? ''; ?>" method="POST" enctype="multipart/form-data" id="userForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div id="userFormsContainer">
                     <div class="user-form">
                         <div class="form-group">
@@ -176,23 +195,28 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             <input type="password" name="users[0][password]" required>
                         </div>
                         <div class="form-group">
-                            <label for="role_id">Rol:</label>
-                            <select name="users[0][role_id]" required>
-                                <option value="">Seleccione un Rol</option>
-                                <?php foreach ($roles as $role): ?>
-                                    <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label for="role_ids">Roles:</label>
+                            <?php foreach ($roles as $role): ?>
+                                <div>
+                                    <input type="checkbox" name="users[0][role_ids][]" value="<?php echo htmlspecialchars($role['id']); ?>">
+                                    <?php echo htmlspecialchars($role['name']); ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
                 <button type="button" class="btn-add" onclick="addUserForm()">Agregar Otro Usuario</button>
+                <div class="form-group">
+                    <label for="excel_file">O cargar archivo de Excel:</label>
+                    <input type="file" name="excel_file" id="excel_file" accept=".xlsx, .xls">
+                </div>
                 <div class="form-group">
                     <input type="submit" value="Crear Usuarios" class="btn">
                 </div>
             </form>
         </div>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
         <script>
             let userFormCount = 1;
 
@@ -222,18 +246,55 @@ class CreateUserHTMLPage extends GTKHTMLPage
                         <input type="password" name="users[${userFormCount}][password]" required>
                     </div>
                     <div class="form-group">
-                        <label for="role_id">Rol:</label>
-                        <select name="users[${userFormCount}][role_id]" required>
-                            <option value="">Seleccione un Rol</option>
-                            <?php foreach ($roles as $role): ?>
-                                <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label for="role_ids">Roles:</label>
+                        <?php foreach ($roles as $role): ?>
+                            <div>
+                                <input type="checkbox" name="users[${userFormCount}][role_ids][]" value="<?php echo htmlspecialchars($role['id']); ?>">
+                                <?php echo htmlspecialchars($role['name']); ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 `;
                 userFormsContainer.appendChild(newUserForm);
                 userFormCount++;
             }
+
+            document.getElementById('excel_file').addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        // Clear existing forms
+                        const userFormsContainer = document.getElementById('userFormsContainer');
+                        userFormsContainer.innerHTML = '';
+                        userFormCount = 0;
+
+                        // Skip header row and add forms for each row
+                        json.slice(1).forEach((row, index) => {
+                            addUserForm();
+                            document.querySelector(`input[name="users[${index}][cedula]"]`).value = row[0];
+                            document.querySelector(`input[name="users[${index}][nombres]"]`).value = row[1];
+                            document.querySelector(`input[name="users[${index}][apellidos]"]`).value = row[2];
+                            document.querySelector(`input[name="users[${index}][email]"]`).value = row[3];
+                            document.querySelector(`input[name="users[${index}][password]"]`).value = row[4];
+                            const roleIds = row[5].split(',');
+                            roleIds.forEach(roleId => {
+                                const checkbox = document.querySelector(`input[name="users[${index}][role_ids][]"][value="${roleId}"]`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                }
+                            });
+                        });
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            });
         </script>
     
         <?php return ob_get_clean();
