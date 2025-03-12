@@ -15,12 +15,14 @@ class PaginaParaAsignar extends GTKHTMLPage
         $this->NombreDataAccessParaMuchos = $NombreDataAccessParaMuchos;
         $this->NombreRelacion = $NombreRelacion;
 
+        
         if ($unoColumn === null || $muchoColumn === null) {
             throw new InvalidArgumentException("Las columnas unoColumn y muchoColumn son obligatorias.");
         }
 
         $this->relation = new OneToManyRelation($NombreRelacion, $unoColumn, $muchoColumn);
 
+     
         error_log("PaginaParaAsignar initialized with: NombreDataAccessParaUno = $NombreDataAccessParaUno, NombreDataAccessParaMuchos = $NombreDataAccessParaMuchos, NombreRelacion = $NombreRelacion, unoColumn = $unoColumn, muchoColumn = $muchoColumn");
     }
 
@@ -111,22 +113,6 @@ class PaginaParaAsignar extends GTKHTMLPage
 
     public function renderBody()
     {
-        $user = $this->getCurrentUser();
-        $userRoles = DataAccessManager::get("roles")->rolesForUser($user);
-
-        $isAdminOrDev = false;
-        foreach ($userRoles as $role) {
-            if (in_array(strtolower($role['name']), ['admin', 'dev', 'devs'])) {
-                $isAdminOrDev = true;
-                break;
-            }
-        }
-
-        if (!$isAdminOrDev) {
-            echo "Access denied. Only admin or dev users can access this page.";
-            return;
-        }
-
         $unoDataAccess = DataAccessManager::get($this->NombreDataAccessParaUno);
         $muchosDataAccess = DataAccessManager::get($this->NombreDataAccessParaMuchos);
 
@@ -149,6 +135,7 @@ class PaginaParaAsignar extends GTKHTMLPage
             }
         }
 
+        
         error_log("renderBody: assigned = " . print_r($assigned, true));
         error_log("renderBody: notAssigned = " . print_r($notAssigned, true));
 
@@ -268,10 +255,5 @@ class PaginaParaAsignar extends GTKHTMLPage
         </div>
     
         <?php return ob_get_clean();
-    }
-
-    private function getCurrentUser()
-    {
-        return DataAccessManager::get("session")->getCurrentUser();
     }
 }
