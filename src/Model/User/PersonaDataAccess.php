@@ -864,6 +864,9 @@ class PersonaDataAccess extends DataAccess
 		{
 			throw new Exception("User ID not found in".print_r($user, true));
 		}
+    
+		$query = new SelectQuery(DataAccessManager::get("role_person_relationships"));
+
 
 		$toInsert = [
 			"role_id" => $roleID,
@@ -874,18 +877,21 @@ class PersonaDataAccess extends DataAccess
 		DataAccessManager::get("role_person_relationships")->insert($toInsert);
 
 		// DataAccessManager::get("role_person_relationships")->insert($toInsert);
+
 	}
 
 	public function permissionsForUser($user)
 {
     $debug = false;
-
+    
     if ($user === null) {
         return [];
     }
 
 
+
     $roles = DataAccessManager::get("role_person_relationships")->rolesForUser($user);
+
 
 
     $permissions = [];
