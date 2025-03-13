@@ -517,7 +517,7 @@ class DataAccessManager
 
     public function internalRegisterAccessor($key, $configuration) 
     {
-		$debug = false;
+		$debug = true;
 
 		if ($debug)
 		{
@@ -587,7 +587,6 @@ class DataAccessManager
         $this->resetAccessor($key);
     }
 
-// ... existing code ...
 
 	public static function updateConfigurationField($key, $field, $value)
 	{
@@ -615,16 +614,8 @@ class DataAccessManager
 		}
 	}
 
-    public function getDatabaseInstance($dbName) 
+	public function getDatabaseInstance($dbName) 
     {
-		// $debug = false;
-		/*
-		if (!$dbName)
-		{
-			return null;
-		}
-		*/
-
         if (!isset($this->databases[$dbName])) 
         {
             if (!isset($this->databaseConfigurations[$dbName])) 
@@ -642,14 +633,17 @@ class DataAccessManager
             $connection_string = $config["connectionString"];
             $username          = $config["userName"];
             $password          = $config["password"];
+            $options           = $config["connectionOptions"] ?? [];
 
             $this->databases[$dbName] = new PDO(
                 $connection_string,
                 $username, 
-                $password
+                $password,
+                $options
             );  
+        }
 
-			if (strpos($connection_string, "sqlite") !== false)
+		if (strpos($connection_string, "sqlite") !== false)
 			{
 				try
 				{
@@ -755,9 +749,11 @@ class DataAccessManager
 					}
 				}
 			}
-        }
+        
         return $this->databases[$dbName];
     }
+
+
 
 	public function internalRegisterAlias($key, $alias) 
     {
@@ -963,7 +959,6 @@ class DataAccessManager
 		$potentialDataAccessorKey = $pathParts[0];
 		$toTryDataAccessorKey     = null;
 
-
 		if ($debug)
 		{
 			gtk_log("Potential data accessor key: ".$potentialDataAccessorKey);
@@ -1022,7 +1017,6 @@ class DataAccessManager
 	
 		if (!$user)
 		{
-
 			echo Glang::get("DataAccessManager/RequiresRedirect");
 
 			if ($debug)
@@ -1048,8 +1042,9 @@ class DataAccessManager
 			{
 				header("Refresh:3; url=/auth/login.php");
 			}
-
-
+			
+			header("Refresh:3; url=/auth/login.php");
+			echo "Requires redirect. No user.";
 			exit();
 		}
 		else
@@ -1058,33 +1053,35 @@ class DataAccessManager
 		}
 	}
 
+	
+
 	public static function createTables()
-	{
-		self::getSingleton()->internalCreateTables();
-	}
+    {
+        self::getSingleton()->internalCreateTables();
+    }
 
-	public function internalCreateTables()
-	{
-		$debug = true;
+    public function internalCreateTables()
+    {
+        $debug = true;
 
-		foreach ($this->dataAccessorConstructions as $key => $construction)
-		{
-			$dataAccessor = $this->getDataAccessor($key, false);
+        foreach ($this->dataAccessorConstructions as $key => $construction)
+        {
+            $dataAccessor = $this->getDataAccessor($key, false);
     
-    		if (method_exists($dataAccessor, "createOrAnnounceTable"))
-    		{
-        		$dataAccessor->createOrAnnounceTable();
-    		}
-    		else
-    		{
-				if ($debug)
-				{
-					gtk_log("`createTables`: ".$key." - has no `createOrAnnounceTable` \n");
-				}
-    		}
+            if (method_exists($dataAccessor, "createOrAnnounceTable"))
+            {
+                $dataAccessor->createOrAnnounceTable();
+            }
+            else
+            {
+                if ($debug)
+                {
+                    gtk_log("`createTables`: ".$key." - has no `createOrAnnounceTable` \n");
+                }
+            }
     
-		}
-	}
+        }
+    }
 
 	public static function createPermissions($PERMISSION_ARRAYS_TO_ADD)
 	{
