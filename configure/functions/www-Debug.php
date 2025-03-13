@@ -339,15 +339,12 @@ function doOrCatchAndReport($function, $options = [])
     
     $errorLogPath = ini_get("error_log");
 
-    if (isset($options["not_override_error_log_path"]))
+    if (!isTruthy($options["not_override_error_log_path"]))
     {
-        if (!isTruthy($options["not_override_error_log_path"]))
+        if (!$containsLocal)
         {
-            if (!$containsLocal)
-            {
-                error_log("Running `debug.php` - error log original path: ".$errorLogPath);
-                $errorLogPath = setPHPErrorLogPath();
-            }
+            error_log("Running `debug.php` - error log original path: ".$errorLogPath);
+            $errorLogPath = setPHPErrorLogPath();
         }
     }
     

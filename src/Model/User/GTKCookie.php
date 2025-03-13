@@ -203,22 +203,14 @@ class GTKCookie
         );
         */
 
-       
-
-        
-            $success = setcookie($name, $value, [
-                'expires' => $expiry,
-                'path' => $this->path,
-                'domain' => $domain,
-                'secure' => $secure,
-                'httponly' => $httponly,
-                'samesite' => $samesite
-            ]);
-
-       
-        
-    
-        
+        $success = setcookie($name, $value, [
+            'expires' => $expiry,
+            'path' => $this->path,
+            'domain' => $domain,
+            'secure' => $secure,
+            'httponly' => $httponly,
+            'samesite' => $samesite
+        ]);
 
         
 
@@ -227,7 +219,7 @@ class GTKCookie
             error_log("GTKCookie::set - Failed to set cookie: $name");
             throw new Exception("Failed to set cookie: $name");
         }
-       
+
         return $success;
     }
 
@@ -277,7 +269,6 @@ class GTKCookie
 
     public static function setAuthCookie(string $value, ?int $expiry = null)
     {
-        
         $expiry = $expiry ?? time() + 60 * 60 * 24 * 30; // 30 days
 
         $gtkCookie = new GTKCookie();
@@ -285,39 +276,13 @@ class GTKCookie
         // print_r($expiry);
         //die();
 
-        // Code should check if the hostname ends in ".local"
-        // and if it is, will allow non secure cookies
-
-        $secureCookie = true;
-
-        $hostName = $_SERVER['HTTP_HOST'];
-
-        $isSecureConnection = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-
-        $hostEndsWithLocal = str_ends_with($hostName, '.local');
-        
-        if (!$isSecureConnection)
-        {
-            if ($hostEndsWithLocal)
-            {
-                $secureCookie = false;
-            }
-        }
-
         return $gtkCookie->set("AuthCookie", $value, [
             'expires'   => $expiry,
             'path' 	    => '/', 
-            'secure'    => $secureCookie, // consider not using secure cookies in development
+            'secure'    => true, // consider not using secure cookies in development
             'httponly'  => true,
             'samesite'  => 'Strict'
         ]);
-        
-       
-        
-     
-        // Remove the debug die statement
-        // die("Will clear AuthCookie");  // Remove this line
-        
     }
 
     public static function clearAuthCookie()
@@ -333,10 +298,6 @@ class GTKCookie
         $gtkCookie = new GTKCookie();
         
         // Use the set method with empty value and past expiry
-
-        
-
-
         return $gtkCookie->set('AuthCookie', '', [
             'expires' => time() - 3600,  // Set to past time
             'path' => '/',

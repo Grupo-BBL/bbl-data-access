@@ -36,7 +36,6 @@ class DataAccessManager
     private $dataAccessorConstructions = [];
     private $databaseConfigurations    = [];
     private $databases                 = [];
-	private $nonDefaultDataAccessors   = [];
 
 
 
@@ -259,72 +258,6 @@ class DataAccessManager
 	public static function maybeGet($name)
 	{
 		return self::getAccessor($name, false);
-	}
-
-	public static function getOnConnection($connectionName, $dataAccessorName)
-	{
-		$singleton = self::getSingleton();
-
-		return $singleton->internalGetOnConnection($connectionName, $dataAccessorName);	
-	}
-
-	public function internalGetOnConnection($connectionName, $dataAccessorName)
-	{
-		// TODO: Implement internalGetOnConnection() method.
-		// This method should lookup the dataAccessor by name,
-		// verify which connection it is configured for.
-		// If the connection name is the same one as the one we are looking for,
-		// return the dataAccessor.
-		// If not, then it should create a new dataAccessor on the fly,
-		// using the PDO instance associated with the connection name 
-		// as the connection and return this new dataAccessor.
-		// this dataAccessor should be stored in the $nonDefaultDataAccessors array,
-		// so that next time this method is called with the same connection name,
-		// it returns the same dataAccessor instance.
-		// The key for this dataAccessor in the $nonDefaultDataAccessors array 
-		// should be the $this->nonDefaultDataAccessors[$connectionName][$dataAccessorName]
-		$debug = false;
-
-		if ($debug) {
-			gtk_log("internalGetOnConnection: connectionName: " . $connectionName);
-			gtk_log("internalGetOnConnection: dataAccessorName: " . $dataAccessorName);
-		}
-
-		// Check if we already have a non-default accessor instance
-		if (isset($this->nonDefaultDataAccessors[$connectionName][$dataAccessorName])) {
-			return $this->nonDefaultDataAccessors[$connectionName][$dataAccessorName];
-		}
-
-		// Get the data accessor configuration
-		$key = $this->keyForDataAccessorConstructions($dataAccessorName);
-		if (!$key) {
-			throw new Exception("Data accessor configuration for '{$dataAccessorName}' not found.");
-		}
-		$config = $this->dataAccessorConstructions[$key];
-
-		// If the requested connection matches the default connection in config,
-		// return the default accessor instance
-		if (isset($config['database']) && $config['database'] === $connectionName) {
-			return $this->getDataAccessor($dataAccessorName);
-		}
-
-		// Get the database instance for the requested connection
-		$db = $this->getDatabaseInstance($connectionName);
-		if (!$db) {
-			throw new Exception("Database connection '{$connectionName}' not found.");
-		}
-
-		// Create new data accessor instance with the specified connection
-		$className = $config['class'];
-		$accessor = new $className($db);
-
-		// Store in nonDefaultDataAccessors array
-		if (!isset($this->nonDefaultDataAccessors[$connectionName])) {
-			$this->nonDefaultDataAccessors[$connectionName] = [];
-		}
-		$this->nonDefaultDataAccessors[$connectionName][$dataAccessorName] = $accessor;
-
-		return $accessor;
 	}
 
     public static function get($name)
@@ -1125,3 +1058,6 @@ class DataAccessManager
 	
 	}
 }
+
+
+class_alias('DataAccessManager', 'DAM');

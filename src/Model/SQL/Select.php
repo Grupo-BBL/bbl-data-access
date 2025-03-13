@@ -26,15 +26,13 @@ class SelectQuery implements IteratorAggregate,
     public $columns;
     public $queryOptions = [];
     public $whereGroup;
-    public $_orderBy;
+    public $orderBy;
     public $limit;
     public $offset;
     public $desiredPageNumber;
     public $generator;
     public $queryModifier;
     public $joins = [];
-    public $isDistinct = false;
-    public $groupByColumns = [];
 
 
     /**
@@ -133,17 +131,6 @@ class SelectQuery implements IteratorAggregate,
         $this->limit = $limit;
     }
 
-    /**
-     * Set the LIMIT clause for the query
-     * @param int $limit Maximum number of rows to return
-     * @return $this For method chaining
-     */
-    public function limit($limit)
-    {
-        $this->limit = $limit;
-        return $this;
-    }
-
     public function setOffset($offset)
     {
         $this->offset = $offset;
@@ -211,19 +198,6 @@ class SelectQuery implements IteratorAggregate,
         $this->columns = $columns;
     }
 
-    /**
-     * Set the columns to be selected in the query
-     * @param array $columns Array of column names to select
-     *                      Can include raw SQL expressions like "COUNT(*) as count"
-     *                      or column names like "id" or "table.column"
-     * @return $this For method chaining
-     */
-    public function select($columns)
-    {
-        $this->columns = $columns;
-        return $this;
-    }
-
     public function getDataAccessorColumnKey($key)
     {
         if (strpos($key, '.') !== false) 
@@ -250,13 +224,6 @@ class SelectQuery implements IteratorAggregate,
         if (!$dbColumnName)
         {
             throw new Exception("Column not found: ".$columnKey.' in '.$dataAccessorName);
-        }
-
-        // If we have joins and the column name doesn't already include a table qualifier,
-        // prefix it with the table name to avoid ambiguous column references
-        if (!empty($this->joins) && strpos($dbColumnName, '.') === false) {
-            $tableName = $dataAccessor->tableName();
-            return $tableName . '.' . $dbColumnName;
         }
 
         return $dbColumnName;
@@ -288,7 +255,7 @@ class SelectQuery implements IteratorAggregate,
         }
         else if ($whereClause instanceof OrderBy)
         {
-            $this->_orderBy = $whereClause;
+            $this->orderBy = $whereClause;
         }
         else if ($whereClause instanceof LimitClause)
         {
@@ -380,10 +347,6 @@ class SelectQuery implements IteratorAggregate,
 
         $sql = "";
         $sql .= "SELECT ";
-        
-        if ($this->isDistinct) {
-            $sql .= "DISTINCT ";
-        }
 
         if ($this->isCountQuery)
         {
@@ -397,12 +360,7 @@ class SelectQuery implements IteratorAggregate,
             {
                 if (is_string($column))
                 {
-                    // Check if this is a raw SQL expression (like COUNT(*) as count)
-                    if (strpos($column, ' as ') !== false || strpos($column, '(') !== false) {
-                        $toQueryColumns[] = $column;
-                    } else {
-                        $toQueryColumns[] = $this->dbColumnNameForKey($column);
-                    }
+                    $toQueryColumns[] = $this->dbColumnNameForKey($column);
                 }
                 else 
                 {
@@ -437,35 +395,16 @@ class SelectQuery implements IteratorAggregate,
             $sql .= ' WHERE ' . $this->whereGroup->getSQLForSelectQuery($this, $params);
         }          
         
-        // Add GROUP BY clause if specified
-        if (!empty($this->groupByColumns)) {
-            $sql .= ' GROUP BY ';
-            $groupByColumns = [];
-            
-            foreach ($this->groupByColumns as $column) {
-                if (is_string($column)) {
-                    // Check if this is a raw SQL expression
-                    if (strpos($column, '(') !== false) {
-                        $groupByColumns[] = $column;
-                    } else {
-                        $groupByColumns[] = $this->dbColumnNameForKey($column);
-                    }
-                }
-            }
-            
-            $sql .= implode(', ', $groupByColumns);
-        }
-        
         if (!$this->isCountQuery)
         {
             $didSetOrderBy = false;
 
-            if (is_array($this->_orderBy) && (count($this->_orderBy) > 0))
+            if (is_array($this->orderBy) && (count($this->orderBy) > 0))
             {
                 $sql .= ' ORDER BY ';
                 $isFirst = true;
                 $isEven  = false;
-                foreach ($this->_orderBy as $orderBy) 
+                foreach ($this->orderBy as $orderBy) 
                 {
                     if ($debug)
                     {
@@ -501,21 +440,13 @@ class SelectQuery implements IteratorAggregate,
     
                 $didSetOrderBy = true;
             }
-            else if (is_string($this->_orderBy))
+            else if (is_string($this->orderBy))
             {
-                // if string contains ASC or DESC, use it as is, otherwise default to DESC
-                if (strpos($this->_orderBy, 'ASC') !== false || strpos($this->_orderBy, 'DESC') !== false)
-                {
-                    $sql .= ' ORDER BY '.$this->_orderBy;
-                }
-                else
-                {
-                    $sql .= ' ORDER BY '.$this->_orderBy." DESC";
-                }
+    
             }
-            else if ($this->_orderBy instanceof OrderBy)
+            else if ($this->orderBy instanceof OrderBy)
             {
-                $sql .= ' ORDER BY '.$this->dbColumnNameForKey($this->_orderBy->column)." ".$this->_orderBy->order;
+                $sql .= ' ORDER BY '.$this->dbColumnNameForKey($this->orderBy->column)." ".$this->orderBy->order;
             }
             else if ($this->dataSource->defaultOrderByColumnKey)
             {
@@ -565,24 +496,9 @@ class SelectQuery implements IteratorAggregate,
         return $sql;
     }
 
-    public function orderBy($toOrderBy)
-    {
-        return $this->setOrderBy($toOrderBy);
-    }
     public function setOrderBy($toOrderBy)
     {
-        $this->_orderBy = $toOrderBy;
-    }
-
-    /**
-     * Add GROUP BY clause to the query
-     * @param array|string $columns Column(s) to group by
-     * @return $this For method chaining
-     */
-    public function groupBy($columns)
-    {
-        $this->groupByColumns = is_array($columns) ? $columns : [$columns];
-        return $this;
+        $this->orderBy = $toOrderBy;
     }
 
     public function sqlForLimitOffset($limit, $offset, $pdo)
@@ -747,29 +663,10 @@ class SelectQuery implements IteratorAggregate,
         return new GTKCountableGenerator($generator, $count);
     }
 
-    public function getAll(GTKSelectQueryModifier &$queryModifier = null)
-    {
-        return $this->executeAndReturnAll($this->queryModifier);
-    }
-    
     public function executeAndReturnAll(GTKSelectQueryModifier &$queryModifier = null)
     {
         $statement = $this->executeAndReturnStatement($queryModifier);
         return $statement->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function getOne(GTKSelectQueryModifier &$queryModifier = null)
-    {
-        $results = $this->executeAndReturnAll($queryModifier);
-        
-        if (count($results) > 0)
-        {
-            return $results[0];
-        }
-        else
-        {
-            return null;
-        }
     }
 
     public function executeAndReturnOne(GTKSelectQueryModifier &$queryModifier = null)
@@ -992,10 +889,6 @@ class SelectQuery implements IteratorAggregate,
 		<?php return ob_get_clean(); // End output buffering and get the buffered content as a string
 	}
 
-    public function distinct()
-    {
-        $this->isDistinct = true;
-        return $this;
-    }
 
+    
 }

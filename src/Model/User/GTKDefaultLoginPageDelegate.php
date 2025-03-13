@@ -154,11 +154,9 @@ class GTKDefaultLoginPageDelegate extends GTKHTMLPage
 		if ($debug)
 		{
 			error_log("Session GUID: ".$sessionGuid);
-			
 		}
 	
 		redirectToPath('/', "Bienvenidos!");
-
 
 		die();
 	}

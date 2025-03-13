@@ -1,9 +1,38 @@
 <?php
 
+require_once dirname(__FILE__, 2).'/vendor/autoload.php';
 
+if (!function_exists("gtk_log"))
+{
+    function gtk_log($toLog)
+    {
+        echo $toLog."\n";
+    }
+    /*
 
+	if (strpos($_SERVER['SCRIPT_NAME'], 'phpunit.phar') !== false) {
+		// Code is being executed under PHPUnit
+		// echo "Running under PHPUnit: ".$_SERVER['SCRIPT_NAME']."\n";
+		// echo "\n\n\n";
+		function gtk_log($toLog)
+		{
+			echo $toLog."\n";
+		}
+	} 
+	else 
+	{
+		// Code is being executed outside of PHPUnit (e.g., by Apache CGI)
+		// echo "Not running under PHPUnit: ".$_SERVER['SCRIPT_NAME']."\n";
+		// echo "\n\n\n";
+		function gtk_log($toLog)
+		{
+			error_log($toLog);
+		}
+	}
+    */
+}
 
-class TestSelectFromWhere extends \PHPUnit\Framework\TestCase
+class TestSelectFromWhere extends PHPUnit\Framework\TestCase
 {
     private $dataAccess;
     private $pdo;
