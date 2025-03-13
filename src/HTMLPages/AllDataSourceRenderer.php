@@ -112,7 +112,7 @@ class AllDataSourceRenderer extends GTKHTMLPage
 			$this->itemsPerPage, 
 			$this->queryOptions);
 
-		$sqlQueryParamsSource = $this->get;
+		$sqlQueryParamsSource = $this->get;								
 
 		if (isset($sqlQueryParamsSource["search"]) && isset($sqlQueryParamsSource["columnToSearch"]))
 		{

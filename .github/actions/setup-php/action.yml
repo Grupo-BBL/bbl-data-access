@@ -19,6 +19,8 @@ runs:
       with:
         php-version: ${{ inputs.php-version }}
         extensions: pdo_sqlite, pdo_mysql, pdo_pgsql, gd, ldap, mbstring, xml, zip
+        coverage: xdebug
+        tools: composer:v2
         
     - name: Validate composer.json
       shell: bash

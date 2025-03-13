@@ -19,3 +19,5 @@ dist/*
 _FOSSIL_
 *~
 auth.json
+test-runs/*
+tests/*.cache

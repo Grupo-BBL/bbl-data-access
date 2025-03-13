@@ -59,6 +59,7 @@
 
     "autoload": {
         "files": [
+            "configure/aliases.php",
             "configure/functions/DataAccessManager-Functions.php",
             "configure/databases.php",
             "configure/functions/HasPermission.php",
@@ -73,5 +74,14 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0"
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:mysql": "phpunit -c tests/units.mysql.xml"
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/Support"
+        ]
     }
 }

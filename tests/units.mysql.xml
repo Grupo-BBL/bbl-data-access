@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         colors="true"
+         bootstrap="bootstrap.php">
+    <testsuites>
+        <testsuite name="GTK Data Access Tests">
+            <directory suffix="Test.php">Unit</directory>
+            <directory suffix=".php">Unit</directory>
+        </testsuite>
+    </testsuites>
+    
+    <coverage>
+        <include>
+            <directory suffix=".php">../src</directory>
+        </include>
+        <report>
+            <html outputDirectory="coverage"/>
+            <clover outputFile="coverage/clover.xml"/>
+        </report>
+    </coverage>
+
+    <php>
+        <env name="DB_HOSTNAME" value="127.0.0.1"/>
+        <env name="DB_USERNAME" value="kanboard"/>
+        <env name="DB_PASSWORD" value="kanboard"/>
+        <env name="DB_NAME" value="kanboard"/>
+    </php>
+</phpunit> 

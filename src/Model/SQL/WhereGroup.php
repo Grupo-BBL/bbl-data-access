@@ -68,4 +68,9 @@ class WhereGroup implements SQLTextInterface, SQLWhereInterface
 
         return $this;
     }
+
+    public function addWhere($column, $operator = null, ...$values)
+    {
+        return $this->where($column, $operator, ...$values);
+    }
 }

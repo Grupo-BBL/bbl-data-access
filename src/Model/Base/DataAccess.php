@@ -116,8 +116,9 @@ class GTKTableCellItemPresenter
 }
 
 
-class DataAccess /* implements Serializable */
+abstract class DataAccess /* implements Serializable */
 {
+    use DataAccessAuditTrait;
 
     public $identifierKeys = [
         "id",
@@ -260,7 +261,14 @@ class DataAccess /* implements Serializable */
     {
         if ($this->defaultSearchByColumnKey)
         {
-            return $this->columnMappingForKey($this->defaultSearchByColumnKey);
+            $columnMapping = $this->columnMappingForKey($this->defaultSearchByColumnKey);
+
+            if (!$columnMapping)
+            {
+                throw new Exception("Invalid column mapping key to search by column: ".get_class($this).": ".$this->defaultSearchByColumnKey);
+            }
+
+            return $columnMapping;
         }
         else
         {
@@ -365,12 +373,44 @@ class DataAccess /* implements Serializable */
         if (!$columnMappingKeyToSearchBy)
         {
             $columnMappingKeyToSearchBy = $this->defaulSearchByColumnMapping();
+        }
+        else if ($columnMappingKeyToSearchBy instanceof GTKColumnMapping)
+        {
+            $columnMappingKeyToSearchBy = $columnMappingKeyToSearchBy->phpKey;
+        }
+        else if (is_string($columnMappingKeyToSearchBy))
+        {
+            $columnMappingKeyToSearchBy = $this->dataMapping->columnMappingForPHPKey($columnMappingKeyToSearchBy);
+        }
+        
 
+        $didLookup = false;
+
+        if ($columnMappingKeyToSearchBy)
+        {
+            $valueToSearchFor = $columnMappingKeyToSearchBy->getValueFromArray($item);
+            $dbItem           = $this->getOne($columnMappingKeyToSearchBy, $valueToSearchFor);
+            $didLookup        = true;
         }
 
-        $valueToSearchFor = $columnMappingKeyToSearchBy->getValueFromArray($item);
+        if (is_array($columnMappingKeyToSearchBy))
+        {
+            $dbItem = $this->getOne($columnMappingKeyToSearchBy, $valueToSearchFor);
+            $didLookup = true;
+            $query = new SelectQuery($this);
 
-        $dbItem = $this->getOne($columnMappingKeyToSearchBy, $valueToSearchFor);
+            foreach ($columnMappingKeyToSearchBy as $keys => $value)
+            {
+                $query->where($keys, "=", $value);
+            }
+
+            $dbItem = $query->executeAndReturnOne();
+        }
+
+        if (!$didLookup)
+        {
+            throw new Exception("No column mapping key to search by found for: ".get_class($this));
+        }
 
         if ($dbItem)
         {
@@ -378,14 +418,22 @@ class DataAccess /* implements Serializable */
             {
                 error_log("Will update item: ".print_r($item, true));
             }
-            if (method_exists($this, "updateFromSeed"))
+
+            $changes = $this->calculateChanges($dbItem, $item);
+
+            if (count($changes))
             {
-                $this->updateFromSeed($item, $dbItem);
+                if (method_exists($this, "updateFromSeed"))
+                {
+                    $this->updateFromSeed($item, $dbItem);
+                }   
+                else
+                {
+                   $this->update($item);
+                }
             }
-            else
-            {
-                $this->update($item);
-            }
+
+            return $this->valueForIdentifier($dbItem);
         }
         else
         {
@@ -393,21 +441,23 @@ class DataAccess /* implements Serializable */
             {
                 error_log("Will insert item: ".print_r($item, true));
             }
+
+            $id = null;
             
             if (method_exists($this, "insertFromSeed"))
             {
-                $this->insertFromSeed($item);
+                $id = $this->insertFromSeed($item);
             }
             else
             {
-                $this->insert($item);
+                $id = $this->insert($item);
             }
+
+            return $id;
         }
     }
 
 
-
-   
 
     public function createOrManagePermissionsWithKey($key)
     {
@@ -449,6 +499,28 @@ class DataAccess /* implements Serializable */
 
             DataAccessManager::get("permissions")->insertIfNotExists($permission);
         }
+    }
+
+    public function removeIdentifierKeyFromItem(&$item)
+    {
+        $primaryKeyMapping = $this->primaryKeyMapping();
+
+        $phpKey = $primaryKeyMapping->phpKey;
+
+        if (isset($item[$phpKey]))
+        {
+            unset($item[$phpKey]);
+        }
+
+        $dbKey = $primaryKeyMapping->getSqlColumnName();
+
+        if (isset($item[$dbKey]))
+        {
+            unset($item[$dbKey]);
+        }
+
+        return $item;
+
     }
 
     public function createOrAnnounceTable()
@@ -541,11 +613,15 @@ class DataAccess /* implements Serializable */
             }
         }
     }
-	public function __construct($p_db, $options)
+
+    
+
+    
+	public function __construct(PDO $PDODBObject, $options)
     {
         $debug = false;
 
-		$this->db = $p_db;
+		$this->db = $PDODBObject;
 
         $this->dataAccessorName = $options["dataAccessorName"] ?? get_class($this);
         
@@ -1617,6 +1693,11 @@ class DataAccess /* implements Serializable */
             return get_class($this);
 		}
 	}
+
+    public function getTableName()
+    {
+        return $this->tableName();
+    }
 	
 
     public function getPDO()
@@ -2300,25 +2381,39 @@ class DataAccess /* implements Serializable */
         return $this->getOne($parameterName, $parameterValue);
     }
 
-    function getOne($columnName, $input, $debug = false)
+    function getOne($columnNameOrArrayOrColumnMapping, $input = null, $debug = false)
     {
         $debug = false;
 
-        $result = $this->getMany($columnName, $input, $debug);
-
-        $toReturn = null;
-
-        if (count($result))
+        if (is_array($columnNameOrArrayOrColumnMapping))
         {
-            $toReturn = $result[0];
+            $query = new SelectQuery($this);
+
+            foreach ($columnNameOrArrayOrColumnMapping as $column => $value)
+            {
+                $query->where($column, "=", $value);
+            }
+
+            return $query->getOne();
         }
+        else
+        {
+            $result = $this->getMany($columnNameOrArrayOrColumnMapping, $input, $debug);
+
+            $toReturn = null;
+
+            if (count($result))
+            {
+                $toReturn = $result[0];
+            }
         
-        if ($debug)
-        {
-            gtk_log("Returning: ".serialize($toReturn));
-        }
+            if ($debug)
+            {
+                gtk_log("Returning: ".serialize($toReturn));
+            }
 
-        return $toReturn;
+            return $toReturn;
+        }
 
     }
  
@@ -2406,8 +2501,12 @@ class DataAccess /* implements Serializable */
 		return $result;
 	}
 
-
-
+    public function executeRawQuery($sql, $params = [])
+    {
+        $stmt = $this->getDB()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }   
 
 
     function addWhereClausesToSql($sql, $whereOptions)
@@ -3539,7 +3638,7 @@ class DataAccess /* implements Serializable */
                     if ($columnMapping)
                     {
                         $className = get_class($this);
-                        die("Trying to insert for un-insertable column: ".$columnMapping->phpKey); 
+                        throw new Exception("Trying to insert for un-insertable column: ".$columnMapping->phpKey); 
                     }
                     continue;
                 }
@@ -3588,7 +3687,7 @@ class DataAccess /* implements Serializable */
 
         if (!$this->itemContainsPrimaryMappingKey($item))
         {
-            $id = $this->getDB()->lastInsertId();
+            $id = $this->lastInsertId();
 
             if ($debug)
             {
@@ -3599,8 +3698,15 @@ class DataAccess /* implements Serializable */
             $item["ROWID"] = $id ?? "SuccessButNoId";
         }
 
+        $this->recordAudit('INSERT', $id, $item);
+
         return $id;
         // return $result;
+    }
+
+    public function lastInsertId()
+    {
+        return $this->getDB()->lastInsertId();
     }
 
     public function containsAnyKeyInFamily($key, $item)
@@ -3863,6 +3969,12 @@ class DataAccess /* implements Serializable */
                         continue;
                     }
 
+                    if (!$columnMapping)
+                    {
+                        gtk_log("`updateWithPHPKeys`: No column mapping for key: ".$key);
+                        continue;
+                    }
+
                     if ($columnMapping->doesItemContainOurKey($item))
                     {
                         if ($debug)
@@ -3889,7 +4001,15 @@ class DataAccess /* implements Serializable */
 
             $stmt->bindValue(":".$primaryKeyMapping->phpKey, $identifierValue);
 
+            $oldItem =  $this->getByIdentifier($identifierValue);
+            
+            $changes = $this->calculateChanges($oldItem, $item);
+
             $result = $stmt->execute();
+
+            $this->recordAudit('UPDATE', $identifierValue, $changes);
+
+            
         }
         catch (Exception $e)
         {
@@ -5049,44 +5169,4 @@ class DataAccess /* implements Serializable */
 		</table>
 		<?php return ob_get_clean(); // End output buffering and get the buffered content as a string
 	}
-}
-
-function TestableDataAccess_generateMicroTimeUUID() 
-    {
-        $microTime = microtime(true);
-        $microSeconds = sprintf("%06d", ($microTime - floor($microTime)) * 1e6);
-        $time = new DateTime(date('Y-m-d H:i:s.' . $microSeconds, $microTime));
-        $time = $time->format("YmdHisu"); // Format time to a string with microseconds
-        return md5($time); // You can also use sha1 or any other algorithm
-    }   
-
-class TestableDataAccess extends DataAccess
-{
-    public function register()
-    {
-
-        $columns = [
-            GTKColumnMapping::stdStyle($this, "id",             null, "ID", [
-                "isPrimaryKey"    => true,
-                "isAutoIncrement" => true,
-            ]),
-            GTKColumnMapping::stdStyle($this, "a",              null, "A"),
-            GTKColumnMapping::stdStyle($this, "b",              null, "B"),
-            GTKColumnMapping::stdStyle($this, "date_created",   null, "Date Created"),
-            GTKColumnMapping::stdStyle($this, "date_modified",  null, "Date Modified"),
-        ]; 
-
-        $this->dataMapping = new GTKDataSetMapping($this, $columns);
-    }
- 
-
-    private function generateMicroTimeUUID() 
-    {
-        $microTime = microtime(true);
-        $microSeconds = sprintf("%06d", ($microTime - floor($microTime)) * 1e6);
-        $time = new DateTime(date('Y-m-d H:i:s.' . $microSeconds, $microTime));
-        $time = $time->format("YmdHisu"); // Format time to a string with microseconds
-        return md5($time); // You can also use sha1 or any other algorithm
-    }   
-
 }

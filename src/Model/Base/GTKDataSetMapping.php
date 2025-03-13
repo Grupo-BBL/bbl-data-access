@@ -373,7 +373,7 @@ class GTKDataSetMapping {
         return null;
     }
 
-    public function columnMappingForPHPKey($phpKey, $crash = true)
+    public function columnMappingForPHPKey($phpKey, $crash = false)
     {
         if ($crash)
         {
@@ -442,6 +442,13 @@ class GTKDataSetMapping {
     {
         $columnMapping = $this->columnMappingForKey($key);
 
+        // If the column mapping is not found...return the key
+        if (!$columnMapping)
+        {
+            return $key;
+        }
+
+        // If the column mapping is not found, throw an exception
         if (!$columnMapping)
         {
             throw new Exception("`dbColumnNameForKey` - $this->tableName - :::No column mapping for key: " . $key);

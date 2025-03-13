@@ -46,7 +46,7 @@ class GTKMenuItemPair
         }
     }
 
-    private function checkAccess($user) 
+    public function checkAccess($user) 
     {
         if (!$this->accessRequirements) 
         {
@@ -90,6 +90,16 @@ class GTKHTMLPage
 
 	public bool    $authenticationRequired = false; // ovveride in construct
 	public ?string $permissionRequired 	   = null;  // override in construct
+
+	/**
+	 * Array to store stylesheets
+	 */
+	protected $stylesheets = [];
+	
+	/**
+	 * Array to store scripts
+	 */
+	protected $scripts = [];
 
 	public function __construct($options = [])
 	{
@@ -146,6 +156,25 @@ class GTKHTMLPage
 		
 		return $ipAddress;
 	}
+
+	public function getCurrentUser()
+	{
+		return $this->currentUser();
+	}
+
+	public function getUserID()
+	{
+		$user = $this->getCurrentUser();
+
+		if (!$user)
+		{
+			return null;
+		}
+
+		return DAM::get("persona")->valueForIdentifier($user);
+	}
+	
+	
 
 
 
@@ -223,6 +252,19 @@ class GTKHTMLPage
 		}
 
 		return $toReturn;
+	}
+
+	/**
+	 * Add a message to be displayed on the page
+	 * @param string $type The type of message (error, success, warning, info)
+	 * @param string $text The message text
+	 */
+	public function addMessage($type, $text)
+	{
+		$this->messages[] = [
+			'type' => $type,
+			'text' => $text
+		];
 	}
 
 	public function processPUT(){}
@@ -461,7 +503,9 @@ class GTKHTMLPage
 
 	public function render($get, $post, $server, $cookie, $session, $files, $env)
 	{
-		$debug = false;
+		$debug = true;
+
+		$html = null;
 
 		$this->setCustomLogFile();
 
@@ -525,19 +569,29 @@ class GTKHTMLPage
 		}
 
 		if ($this->shouldRespondWithJSON())
-        {
-            if (method_exists($this, "renderJSON"))
+		{
+			if (method_exists($this, "renderJSON"))
 			{
 				return $this->renderJSON();
 			}
-        }
+		}
 
-		$text = "";
-		$text .= $this->gtk_renderHeader();
-		$text .= $this->gtk_renderBody();
-		$text .= $this->gtk_renderFooter();
+		// Add stylesheets
+		$html .= $this->renderStylesheets();
 		
-		return $text;
+		$html .= "<body>\n";
+		
+		// Add header, body, footer content
+		$html .= $this->gtk_renderHeader();
+		$html .= $this->gtk_renderBody();
+		$html .= $this->gtk_renderFooter();
+		
+		// Add scripts at the end of body
+		$html .= $this->renderScripts();
+		
+		$html .= "</body>\n</html>";
+		
+		return $html;
 	}
 
 	public function shouldRespondWithJSON()
@@ -551,6 +605,56 @@ class GTKHTMLPage
     	{
         	return htmlspecialchars($string);
     	}
+	}
+
+	/**
+	 * Adds a stylesheet to the page
+	 * 
+	 * @param string $url URL of the stylesheet to add
+	 * @return void
+	 */
+	public function addStylesheet($url)
+	{
+		$this->stylesheets[] = $url;
+	}
+
+	/**
+	 * Adds a script to the page
+	 * 
+	 * @param string $url URL of the script to add
+	 * @return void
+	 */
+	public function addScript($url)
+	{
+		$this->scripts[] = $url;
+	}
+
+	/**
+	 * Renders the stylesheets in the head section
+	 * 
+	 * @return string HTML for the stylesheets
+	 */
+	protected function renderStylesheets()
+	{
+		$html = '';
+		foreach ($this->stylesheets as $stylesheet) {
+			$html .= '<link rel="stylesheet" href="' . $stylesheet . '">' . PHP_EOL;
+		}
+		return $html;
+	}
+
+	/**
+	 * Renders the scripts at the end of the body
+	 * 
+	 * @return string HTML for the scripts
+	 */
+	protected function renderScripts()
+	{
+		$html = '';
+		foreach ($this->scripts as $script) {
+			$html .= '<script src="' . $script . '"></script>' . PHP_EOL;
+		}
+		return $html;
 	}
 
 }
