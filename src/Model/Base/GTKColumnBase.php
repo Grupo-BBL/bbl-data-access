@@ -264,7 +264,6 @@ class GTKColumnBase
     {
         return isset($this->_isPrimaryKey) ? $this->_isPrimaryKey : false;
     }
-
     public function setAsPrimaryKey()
     {
         $this->_isPrimaryKey = true;

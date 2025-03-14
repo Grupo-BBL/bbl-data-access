@@ -6,8 +6,8 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
 
     public function register()
     {
-            $columnMappings = [
-			new GTKColumnMapping($this, "role_permission_relationship_id", [
+        $columnMappings = [
+            new GTKColumnMapping($this, "role_permission_relationship_id", [
                 "formLabel" => "ID",
                 "isPrimaryKey" => true, 
                 "isAutoIncrement" => true, 
@@ -20,32 +20,43 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
                 "columnType" => "INTEGER",
             ]),
             new GTKColumnMapping($this, "qualifiers"),
-			new GTKColumnMapping($this, "comments"),
-			new GTKColumnMapping($this, "is_active", [
+            new GTKColumnMapping($this, "comments"),
+            new GTKColumnMapping($this, "is_active", [
                 "columnType" => "BOOLEAN",
             ]),
-			new GTKColumnMapping($this, "date_created"),
-			new GTKColumnMapping($this, "date_modified"),
-		];
+            new GTKColumnMapping($this, "date_created"),
+            new GTKColumnMapping($this, "date_modified"),
+        ];
 
-		$this->dataMapping = new GTKDataSetMapping($this, $columnMappings);
+        $this->dataMapping = new GTKDataSetMapping($this, $columnMappings);
     }
 
     public function migrate()
     {
-        $this->getDB()->query("CREATE TABLE IF NOT EXISTS {$this->tableName()} 
-        (role_permission_relationship_id INTEGER PRIMARY KEY,
-         role_id,
-         permission_id, 
-         comments,
-         is_active,
-         date_created,
-         date_modified,
-        UNIQUE(role_permission_relationship_id))");
+        $sql = "
+            CREATE TABLE IF NOT EXISTS role_permission_relationships (
+                role_permission_relationship_id INT PRIMARY KEY AUTO_INCREMENT,
+                role_id INT NOT NULL,
+                permission_id INT NOT NULL,
+                qualifiers VARCHAR(255) NULL,
+                comments VARCHAR(255) NULL,
+                is_active BOOLEAN NULL,
+                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                date_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        ";
 
-        // $this->getDB()->query("ALTER TABLE ".$this->tableName()." ADD COLUMN qualifiers;");
-        $this->addColumnIfNotExists("qualifiers");
+        $this->getDB()->query($sql);
 
+        $this->addColumnIfNotExists("qualifiers", "VARCHAR(255) NULL");
+    }
+
+    public function addColumnIfNotExists($columnName, $columnDefinition = 'VARCHAR(255) NULL')
+    {
+        $result = $this->getDB()->query("SHOW COLUMNS FROM role_permission_relationships LIKE '$columnName'");
+        if ($result->rowCount() == 0) {
+            $this->getDB()->query("ALTER TABLE role_permission_relationships ADD COLUMN $columnName $columnDefinition");
+        }
     }
 
     public function permissionRelationsForRole($role)
@@ -73,20 +84,6 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
         $query->where(new WhereClause(
             "role_id", "=", $roleID
         ));
-
-        /*
-        $isActiveClause = new WhereGroup("OR");
-
-        $isActiveClause->where(new WhereClause(
-            "is_active", "=",  true
-        ));
-
-        $isActiveClause->where(new WhereClause(
-            "is_active", "=",  "1"
-        ));
-
-        $query->where($isActiveClause);
-        */
 
         if ($debug)
         {
@@ -139,9 +136,16 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
             $permissionIDS[] = $permissionRelation["permission_id"];
         }
 
+        if (empty($permissionIDS)) {
+            if ($debug) {
+                gtk_log("No permissions found for role ID: $roleID");
+            }
+            return [];
+        }
+
         if ($debug)
         {
-            gtk_log("Permission IDs fpr Role (".serialize($role).") - : ".print_r($permissionIDS, true));
+            gtk_log("Permission IDs for Role (".serialize($role).") - : ".print_r($permissionIDS, true));
         }
 
         $permissions = DataAccessManager::get('permissions')->getByIdentifier($permissionIDS);    
@@ -171,7 +175,6 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
 
         return $toReturn;
     }
-
 
     public function selectForRole($role)
     {

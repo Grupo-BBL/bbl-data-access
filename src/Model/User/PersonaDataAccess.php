@@ -643,7 +643,7 @@ class PersonaDataAccess extends DataAccess
 	// public function createUserWithNoPassword($)
 
 	public function createUserIfNotExists($user)
-{
+  {
     $existingUser = $this->where("email", $user['email']);
     if (!$existingUser)
     {
@@ -656,7 +656,6 @@ class PersonaDataAccess extends DataAccess
         $this->createUser($user);
         return $this->getDB()->lastInsertId(); // Devolver el ID del usuario recién creado
     }
-
 }
 	
 	public function createUser($user)
@@ -867,32 +866,24 @@ class PersonaDataAccess extends DataAccess
     
 		$query = new SelectQuery(DataAccessManager::get("role_person_relationships"));
 
-
 		$toInsert = [
 			"role_id" => $roleID,
 			"user_id" => $userID,
 		];
 		
-
 		DataAccessManager::get("role_person_relationships")->insert($toInsert);
-
 		// DataAccessManager::get("role_person_relationships")->insert($toInsert);
-
 	}
 
 	public function permissionsForUser($user)
 {
     $debug = false;
-    
+
     if ($user === null) {
         return [];
     }
 
-
-
     $roles = DataAccessManager::get("role_person_relationships")->rolesForUser($user);
-
-
 
     $permissions = [];
 
@@ -1199,6 +1190,7 @@ class PersonaDataAccess extends DataAccess
             if ($email && $generatedPassword)
             {
 
+
 				if ($email && $generatedPassword)
 				{
 					if (method_exists($this, "sendWelcomeEmail"))
@@ -1219,6 +1211,7 @@ class PersonaDataAccess extends DataAccess
 			if ($userFromDB && $email && DAM::get("person_email_aliases")) {
 				DAM::get("person_email_aliases")->addEmailForPerson($userFromDB['id'], $email, true);
 			}
+
 
 	    }
         else
@@ -1254,7 +1247,6 @@ class PersonaDataAccess extends DataAccess
 		return $userFromDB;
 	}
 
-
 	public function createUserWithRoles($userData, $roleIds)
     {
         // Crear el usuario si no existe
@@ -1274,6 +1266,7 @@ class PersonaDataAccess extends DataAccess
             return ['success' => false, 'message' => 'Usuario creado, pero error al asignar los roles.'];
         }
     }
+
 
 	public function getAllEmailsForUser($user)
 	{
