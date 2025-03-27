@@ -1,29 +1,44 @@
 <?php
 
+
 class FacturacionAuxiliarDataAccess extends DataAccess
 {
     public function register()
     {
         $columnMappings = [
-            new GTKColumnMapping($this, "AUXcod", [
+            new GTKColumnMapping($this, "AUSEQ", [
                 "isPrimaryKey" => true,
-                "columnType" => "TEXT"
+                "isAutoIncrement" => true,
+                "columnType" => "INTEGER"
             ]),
-            new GTKColumnMapping($this, "AUXnom", [
-                "isRequired" => true,
-                "columnType" => "TEXT"
+            new GTKColumnMapping($this, "AUCOD", [
+                "columnType" => "TEXT",
+                "maxLength" => 24
             ]),
-            new GTKColumnMapping($this, "AUXrnc", [
-                "columnType" => "TEXT"
+            new GTKColumnMapping($this, "AUDES", [
+                "columnType" => "TEXT",
+                "maxLength" => 80
             ]),
-            new GTKColumnMapping($this, "AUXdir", [
-                "columnType" => "TEXT"
+            new GTKColumnMapping($this, "AUORI", [
+                "columnType" => "TEXT",
+                "maxLength" => 2
             ]),
-            new GTKColumnMapping($this, "AUXtel", [
-                "columnType" => "TEXT"
+            new GTKColumnMapping($this, "AUCHK", [
+                "columnType" => "TINYINT"
             ]),
-            new GTKColumnMapping($this, "AUXema", [
-                "columnType" => "TEXT"
+            new GTKColumnMapping($this, "AUNUM", [
+                "columnType" => "DECIMAL"
+            ]),
+            new GTKColumnMapping($this, "AUDIS", [
+                "columnType" => "DECIMAL"
+            ]),
+            new GTKColumnMapping($this, "AUCTR", [
+                "columnType" => "TEXT",
+                "maxLength" => 16
+            ]),
+            new GTKColumnMapping($this, "AUCAN", [
+                "columnType" => "TEXT",
+                "maxLength" => 40
             ])
         ];
         
@@ -35,33 +50,27 @@ class FacturacionAuxiliarDataAccess extends DataAccess
      */
     public function getClienteInfo($clienteId)
     {
-        $query = new SelectQuery($this);
-        $query->where("AUXcod", "=", $clienteId);
-        $cliente = $query->executeAndReturnFirst();
-
-        if ($cliente) {
-            $cliente['tipo_documento'] = $this->determinarTipoDocumento($cliente['AUXrnc']);
-        }
-
-        return $cliente;
-    }
-
-    /**
-     * Determinar tipo de documento basado en el RNC
-     */
-    private function determinarTipoDocumento($rnc)
-    {
-        if (empty($rnc)) {
-            return 'RNC';
-        }
+        $db = $this->getDB();
+        $sql = "SELECT 
+            AUCOD as AUXcod,
+            AUDES as AUXnom,
+            AUNUM as AUXrnc,
+            AUCAN as AUXdir,
+            AUCTR as AUXtel,
+            AUORI as origen,
+            AUCHK as check_status,
+            AUDIS as disponible,
+            CASE 
+                WHEN LEN(RTRIM(CAST(AUNUM as varchar))) = 11 THEN 'RNC'
+                WHEN LEN(RTRIM(CAST(AUNUM as varchar))) = 13 THEN 'CED'
+                ELSE 'RNC'
+            END as tipo_documento
+        FROM ffAuxiliar 
+        WHERE AUCOD = :clienteId";
         
-        $length = strlen(trim($rnc));
-        if ($length == 11) {
-            return 'RNC';
-        } elseif ($length == 13) {
-            return 'CED';
-        }
-        return 'RNC';
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':clienteId' => $clienteId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function getTableName()

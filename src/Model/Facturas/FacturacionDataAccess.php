@@ -1,5 +1,8 @@
 <?php
 
+
+
+
 class FacturacionDataAccess extends DataAccess
 {
     public function register()
@@ -12,6 +15,9 @@ class FacturacionDataAccess extends DataAccess
             ]),
             new GTKColumnMapping($this, "FGEcli", [
                 "isRequired" => true,
+                "columnType" => "TEXT"
+            ]),
+            new GTKColumnMapping($this, "FGEncl", [
                 "columnType" => "TEXT"
             ]),
             new GTKColumnMapping($this, "FGEncf", [
@@ -103,132 +109,80 @@ class FacturacionDataAccess extends DataAccess
         return $this->getOne("FGEncf", $ncf);
     }
 
-/**
- * Obtener los items de una factura
- */
-public function getItemsFactura($facturaId)
-{
-    $db = $this->getDB();
-    $sql = "SELECT * FROM ffItemsFG WHERE yFGEseq = :facturaId"; 
-    $stmt = $db->prepare($sql);
-    $stmt->execute([':facturaId' => $facturaId]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+    /**
+     * Generar el JSON para envío a la API
+     */
+    public function generarJsonEnvio($facturaId)
+    {
+        // Obtener la factura
+        $factura = $this->getFacturaPorId($facturaId);
+        if (!$factura) {
+            throw new Exception("Factura no encontrada");
+        }
 
+        // Obtener información adicional usando los nuevos DataAccess
+        $auxiliarDA = DataAccessManager::get('FacturacionAuxiliar');
+        $itemsDA = DataAccessManager::get('FacturacionItems');
+        $pagoDA = DataAccessManager::get('FacturacionPago');
 
-/**
- * Obtener información del cliente desde ffAuxiliar
- */
-public function getClienteInfo($clienteId)
-{
-    $db = $this->getDB();
-    $sql = "SELECT 
-    a.AUXcod as codigo,
-    a.AUXnom as nombre,
-    a.AUXrnc as documento,
-    a.AUXdir as direccion,
-    a.AUXtel as telefono,
-    a.AUXema as email,
-    CASE 
-        WHEN DATALENGTH(a.AUXrnc) = 11 THEN 'RNC'
-        WHEN DATALENGTH(a.AUXrnc) = 13 THEN 'CED'
-        ELSE 'RNC'
-    END as tipo_documento
-     FROM ffAuxiliar a 
-      WHERE a.AUXcod = :clienteId";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([':clienteId' => $clienteId]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
-}
+        $cliente = $auxiliarDA->getClienteInfo($factura['FGEcli']);
+        $items = $itemsDA->getItemsPorFactura($facturaId);
+        $infoPago = $pagoDA->getInfoPago($facturaId);
 
-/**
- * Obtener información de pago de la factura desde ffFactGral
- */
-public function getInfoPago($facturaId)
-{
-    $db = $this->getDB();
-    $sql = "SELECT 
-                COALESCE(FGEfpa, '') as forma_pago,
-                COALESCE(FGEpla, 0) as plazo,
-                COALESCE(FGEmnd, 'DOP') as moneda
-            FROM ffFactGral 
-            WHERE FGEseq = :facturaId";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([':facturaId' => $facturaId]);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
-}
+        // Construir el array para el JSON
+        $jsonData = [
+            "origen" => "Stonewood-app",
+            "factura" => [
+                "numero_factura" => $factura['FGEncf'],
+                "fecha_emision" => date('Y-m-d', strtotime($factura['FGEfec'])),
+                
+                "receptor" => [
+                    "tipo_documento" => $cliente['tipo_documento'] ?? 'RNC',
+                    "numero_documento" => $cliente['AUXrnc'] ?? '',
+                    "nombre" => $cliente['AUXnom'] ?? $factura['FGEncl'],
+                    "direccion" => $cliente['AUXdir'] ?? '',
+                    "telefono" => $cliente['AUXtel'] ?? '',
+                    "email" => $cliente['AUXema'] ?? ''
+                ],
 
-/**
- * Generar el JSON para envío a la API
- */
-public function generarJsonEnvio($facturaId)
-{
-    // Obtener la factura
-    $factura = $this->getFacturaPorId($facturaId);
-    if (!$factura) {
-        throw new Exception("Factura no encontrada");
-    }
+                "items" => array_map(function($item) {
+                    $subtotal = floatval($item['yFGEval']) * floatval($item['yFGEcan']);
+                    return [
+                        "descripcion" => $item['yFGEdes'],
+                        "cantidad" => floatval($item['yFGEcan']),
+                        "precio_unitario" => floatval($item['yFGEval']),
+                        "descuento" => 0,
+                        "itbis" => $subtotal * 0.18,
+                        "isc" => 0,
+                        "propina_legal" => 0
+                    ];
+                }, $items),
 
-    // Obtener información adicional
-    $cliente = $this->getClienteInfo($factura['FGEcli']);
-    $infoPago = $this->getInfoPago($facturaId);
-    $items = $this->getItemsFactura($facturaId);
-
-    // Construir el array para el JSON
-    $jsonData = [
-        "origen" => "Stonewood-app",
-        "factura" => [
-            "numero_factura" => $factura['FGEncf'],  // Usamos FGEncf que es el NCF
-            "fecha_emision" => date('Y-m-d', strtotime($factura['FGEfec'])),
-            
-            "receptor" => [
-                "tipo_documento" => $cliente['tipo_documento'] ?? 'RNC',
-                "numero_documento" => $cliente['documento'] ?? '',
-                "nombre" => $cliente['nombre'] ?? $factura['FGEncl'], // Primero intentamos el nombre del auxiliar
-                "direccion" => $cliente['direccion'] ?? '',
-                "telefono" => $cliente['telefono'] ?? '',
-                "email" => $cliente['email'] ?? ''
-            ],
-        
-
-            "items" => array_map(function($item) {
-                $subtotal = floatval($item['yFGEval']) * floatval($item['yFGEcan']);
-                return [
-                    "descripcion" => $item['yFGEdes'],
-                    "cantidad" => floatval($item['yFGEcan']),
-                    "precio_unitario" => floatval($item['yFGEval']),
-                    "descuento" => 0,
-                    "itbis" => $subtotal * 0.18,
+                "totales" => [
+                    "subtotal" => floatval($factura['FGEtot']) - floatval($factura['FGEitb']),
+                    "descuento_global" => 0,
+                    "itbis" => floatval($factura['FGEitb']),
                     "isc" => 0,
-                    "propina_legal" => 0
-                ];
-            }, $items),
+                    "propina_legal" => 0,
+                    "total" => floatval($factura['FGEtot'])
+                ],
 
-            "totales" => [
-                "subtotal" => floatval($factura['FGEtot']) - floatval($factura['FGEitb']),
-                "descuento_global" => 0,
-                "itbis" => floatval($factura['FGEitb']),
-                "isc" => 0,
-                "propina_legal" => 0,
-                "total" => floatval($factura['FGEtot'])
-            ],
+                "condiciones_pago" => [
+                    "forma_pago" => $infoPago['forma_pago'] ?? '1',
+                    "plazo" => intval($infoPago['plazo'] ?? 0),
+                    "moneda" => $infoPago['moneda'] ?? 'DOP'
+                ],
 
-            "condiciones_pago" => [
-                "forma_pago" => $infoPago['forma_pago'] ?? '1',
-                "plazo" => intval($infoPago['plazo'] ?? 0),
-                "moneda" => $infoPago['moneda'] ?? 'DOP'
-            ],
-
-            "referencias" => [
-                "orden_compra" => "",
-                "pedido" => "",
-                "otros_referencias" => []
+                "referencias" => [
+                    "orden_compra" => "",
+                    "pedido" => "",
+                    "otros_referencias" => []
+                ]
             ]
-        ]
-    ];
+        ];
 
-    return json_encode($jsonData, JSON_PRETTY_PRINT);
-}
+        return json_encode($jsonData, JSON_PRETTY_PRINT);
+    }
 
     /**
      * Obtener el nombre de la tabla
