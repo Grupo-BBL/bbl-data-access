@@ -125,4 +125,18 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
         "class" => "DataAccessAuditTrail",
 		"db" => "appDB"
 	],
+    //////////////////////////////////////////
+    // - 
+    // - Facturación
+    // - 
+    //////////////////////////////////////////
+    "Facturacion" => [
+        "class"                    => "FacturacionDataAccess",
+        "db"                      => "oldStoneDB",
+        "tableName"               => "ffFactGral",
+        "defaultOrderByColumnKey" => "FGEfec",
+        "defaultOrderByOrder"     => "DESC",
+        "singleItemName"          => "Factura",
+        "pluralItemName"          => "Facturas"
+    ],
 ];
