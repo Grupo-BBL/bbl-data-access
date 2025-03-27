@@ -8,9 +8,30 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
     public function processPost()
     {
         if (isset($_POST['enviar_factura'])) {
+            try {
             $facturaId = $_POST['factura_id'];
-            // Por ahora solo guardamos un mensaje de éxito
+                $facturacionDA = DataAccessManager::get('Facturacion');
+                
+                // Generar el JSON
+                $jsonData = $facturacionDA->generarJsonEnvio($facturaId);
+                
             $this->messages[] = "Factura $facturaId marcada para envío";
+                
+                // Agregar script para mostrar el JSON
+                echo "<script>
+                    // Mostrar en consola
+                    console.log('JSON de la Factura $facturaId:');
+                    console.log(" . json_encode($jsonData) . ");
+                    
+                    // Mostrar alerta con el JSON formateado
+                    var jsonObj = JSON.parse(" . json_encode($jsonData) . ");
+                    var jsonStr = JSON.stringify(jsonObj, null, 2);
+                    alert('JSON generado para Factura $facturaId:\\n\\n' + jsonStr);
+                </script>";
+                
+            } catch (Exception $e) {
+                $this->messages[] = "Error al preparar la factura: " . $e->getMessage();
+            }
         }
     }
 
@@ -305,7 +326,7 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
                 </div>
                 <div class="filter-group">
                     <button type="submit" class="btn-buscar">Buscar</button>
-                </div>
+            </div>
             </form>
 
             <div class="table-container">

@@ -139,4 +139,43 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
         "singleItemName"          => "Factura",
         "pluralItemName"          => "Facturas"
     ],
+	"Facturacion" => [
+    "class"                    => "FacturacionDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffFactGral",
+    "defaultOrderByColumnKey" => "FGEfec",
+    "defaultOrderByOrder"     => "DESC",
+    "singleItemName"          => "Factura",
+    "pluralItemName"          => "Facturas"
+],
+
+"FacturacionItems" => [
+    "class"                    => "FacturacionItemsDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffItemsFG",
+    "defaultOrderByColumnKey" => "yFGEseq",
+    "defaultOrderByOrder"     => "ASC",
+    "singleItemName"          => "Item de Factura",
+    "pluralItemName"          => "Items de Factura"
+],
+
+"FacturacionAuxiliar" => [
+    "class"                    => "FacturacionAuxiliarDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffAuxiliar",
+    "defaultOrderByColumnKey" => "AUXcod",
+    "defaultOrderByOrder"     => "ASC",
+    "singleItemName"          => "Auxiliar",
+    "pluralItemName"          => "Auxiliares"
+],
+
+"FacturacionPago" => [
+    "class"                    => "FacturacionPagoDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffFactGral", // Misma tabla, diferentes campos
+    "defaultOrderByColumnKey" => "FGEseq",
+    "defaultOrderByOrder"     => "DESC",
+    "singleItemName"          => "Pago de Factura",
+    "pluralItemName"          => "Pagos de Factura"
+]
 ];
