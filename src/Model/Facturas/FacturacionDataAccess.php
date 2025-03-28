@@ -39,6 +39,9 @@ class FacturacionDataAccess extends DataAccess
             ]),
             new GTKColumnMapping($this, "FGEtip", [
                 "columnType" => "TEXT"
+            ]),
+            new GTKColumnMapping($this, "FGEnum", [
+                "columnType" => "TEXT"
             ])
         ];
         
@@ -120,14 +123,44 @@ class FacturacionDataAccess extends DataAccess
             throw new Exception("Factura no encontrada");
         }
 
+        error_log("Procesando factura: " . json_encode($factura));
+
         // Obtener información adicional usando los nuevos DataAccess
-        $auxiliarDA = DataAccessManager::get('FacturacionAuxiliar');
+        $clienteDA = DataAccessManager::get('Cliente');
         $itemsDA = DataAccessManager::get('FacturacionItems');
         $pagoDA = DataAccessManager::get('FacturacionPago');
 
-        $cliente = $auxiliarDA->getClienteInfo($factura['FGEcli']);
-        $items = $itemsDA->getItemsPorFactura($facturaId);
+        $cliente = $clienteDA->getClienteInfo($factura['FGEcli']);
+        $items = $itemsDA->getItemsPorFactura($factura['FGEnum']);
         $infoPago = $pagoDA->getInfoPago($facturaId);
+
+        error_log("Buscando items para número interno de factura: " . $factura['FGEnum']);
+        error_log("Items encontrados: " . json_encode($items));
+        error_log("Info del cliente: " . json_encode($cliente));
+        error_log("Info del pago: " . json_encode($infoPago));
+
+        // Procesar los items
+        $itemsProcesados = array_map(function($item) use ($factura) {
+            $cantidad = floatval($item['yFGEcan']);
+            $precioUnitario = floatval($item['yFGEval']);
+            $subtotal = $cantidad * $precioUnitario;
+            
+            // Si el item está exento (yFGEexe = 1), no se calcula ITBIS
+            $itbis = $item['yFGEexe'] ? 0 : ($subtotal * 0.18);
+            
+            return [
+                "descripcion" => $item['yFGEdes'],
+                "cantidad" => $cantidad,
+                "precio_unitario" => $precioUnitario,
+                "descuento" => 0,
+                "itbis" => $itbis,
+                "subtotal" => $subtotal,
+                "isc" => 0,
+                "propina_legal" => 0
+            ];
+        }, $items);
+
+        error_log("Items procesados: " . json_encode($itemsProcesados));
 
         // Construir el array para el JSON
         $jsonData = [
@@ -138,25 +171,14 @@ class FacturacionDataAccess extends DataAccess
                 
                 "receptor" => [
                     "tipo_documento" => $cliente['tipo_documento'] ?? 'RNC',
-                    "numero_documento" => $cliente['AUXrnc'] ?? '',
-                    "nombre" => $cliente['AUXnom'] ?? $factura['FGEncl'],
-                    "direccion" => $cliente['AUXdir'] ?? '',
-                    "telefono" => $cliente['AUXtel'] ?? '',
-                    "email" => $cliente['AUXema'] ?? ''
+                    "numero_documento" => $cliente['stFCRNC_CED'] ?? $cliente['stCRNC'] ?? '',
+                    "nombre" => $cliente['nombre'] ?? $factura['FGEncl'],
+                    "direccion" => $cliente['direccion'] ?? '',
+                    "telefono" => $cliente['telefono'] ?? '',
+                    "email" => $cliente['email'] ?? ''
                 ],
 
-                "items" => array_map(function($item) {
-                    $subtotal = floatval($item['yFGEval']) * floatval($item['yFGEcan']);
-                    return [
-                        "descripcion" => $item['yFGEdes'],
-                        "cantidad" => floatval($item['yFGEcan']),
-                        "precio_unitario" => floatval($item['yFGEval']),
-                        "descuento" => 0,
-                        "itbis" => $subtotal * 0.18,
-                        "isc" => 0,
-                        "propina_legal" => 0
-                    ];
-                }, $items),
+                "items" => $itemsProcesados,
 
                 "totales" => [
                     "subtotal" => floatval($factura['FGEtot']) - floatval($factura['FGEitb']),
@@ -181,6 +203,7 @@ class FacturacionDataAccess extends DataAccess
             ]
         ];
 
+        error_log("JSON final: " . json_encode($jsonData));
         return json_encode($jsonData, JSON_PRETTY_PRINT);
     }
 

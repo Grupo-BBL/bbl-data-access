@@ -139,15 +139,6 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
         "singleItemName"          => "Factura",
         "pluralItemName"          => "Facturas"
     ],
-	"Facturacion" => [
-    "class"                    => "FacturacionDataAccess",
-    "db"                      => "oldStoneDB",
-    "tableName"               => "ffFactGral",
-    "defaultOrderByColumnKey" => "FGEfec",
-    "defaultOrderByOrder"     => "DESC",
-    "singleItemName"          => "Factura",
-    "pluralItemName"          => "Facturas"
-],
 
 "FacturacionItems" => [
     "class"                    => "FacturacionItemsDataAccess",
@@ -157,6 +148,16 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
     "defaultOrderByOrder"     => "ASC",
     "singleItemName"          => "Item de Factura",
     "pluralItemName"          => "Items de Factura"
+],
+
+"Cliente" => [
+    "class"                    => "ClienteDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "FCLIENTE",
+    "defaultOrderByColumnKey" => "stCCODE",
+    "defaultOrderByOrder"     => "ASC",
+    "singleItemName"          => "Cliente",
+    "pluralItemName"          => "Clientes"
 ],
 
 "FacturacionAuxiliar" => [
