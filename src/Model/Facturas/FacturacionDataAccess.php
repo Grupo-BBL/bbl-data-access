@@ -204,7 +204,71 @@ class FacturacionDataAccess extends DataAccess
         ];
 
         error_log("JSON final: " . json_encode($jsonData));
+        
+        // Enviar el JSON a la API
+        $resultado = $this->enviarJsonFactura($jsonData);
+        if ($resultado) {
+            error_log("JSON enviado exitosamente a la API para la factura: " . $factura['FGEncf']);
+        } else {
+            error_log("Error al enviar JSON a la API para la factura: " . $factura['FGEncf']);
+        }
+        
         return json_encode($jsonData, JSON_PRETTY_PRINT);
+    }
+    
+    /**
+     * Enviar el JSON de factura al endpoint correspondiente
+     * @param array $jsonData El array de datos de factura
+     * @return bool Resultado de la operación
+     */
+    public function enviarJsonFactura($jsonData)
+    {
+        try {
+            // URL del endpoint que recibe las facturas (localhost para desarrollo)
+            $url = 'http://localhost:8000/api/recibir-factura';
+            
+            error_log("Enviando factura a: " . $url);
+            
+            // Inicializar cURL
+            $ch = curl_init($url);
+            
+            // Configurar opciones de cURL
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($jsonData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ]);
+            
+            // Tiempo máximo de espera (30 segundos)
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            
+            // Ejecutar la solicitud
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            // Verificar errores de cURL
+            if (curl_errno($ch)) {
+                error_log('Error cURL al enviar factura: ' . curl_error($ch));
+                curl_close($ch);
+                return false;
+            }
+            
+            curl_close($ch);
+            
+            // Verificar respuesta exitosa (códigos 2xx)
+            if ($httpCode >= 200 && $httpCode < 300) {
+                error_log('Factura enviada exitosamente. Respuesta: ' . $response);
+                return true;
+            } else {
+                error_log('Error al enviar factura. Código: ' . $httpCode . '. Respuesta: ' . $response);
+                return false;
+            }
+        } catch (Exception $e) {
+            error_log('Excepción al enviar factura: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
