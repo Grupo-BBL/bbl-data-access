@@ -5,32 +5,89 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
     public $messages = [];
     public $itemsPorPagina = 40;
 
+    private function obtenerEstadoFactura($facturaId) {
+        $db = DataAccessManager::get('Facturacion')->getDB();
+        $sql = "SELECT estado, fecha_envio, fecha_recibido, fecha_procesado, mensaje 
+                FROM ffFacturasEnvio 
+                WHERE factura_id = :factura_id";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':factura_id' => $facturaId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    private function actualizarEstadoFactura($facturaId, $ncf, $estado = 'ENVIADO') {
+        try {
+            $db = DataAccessManager::get('Facturacion')->getDB();
+            
+            // Verificar si existe
+            $sqlCheck = "SELECT COUNT(*) as existe FROM ffFacturasEnvio WHERE factura_id = :factura_id";
+            $stmtCheck = $db->prepare($sqlCheck);
+            $stmtCheck->execute([':factura_id' => $facturaId]);
+            $existe = $stmtCheck->fetch(PDO::FETCH_ASSOC)['existe'] > 0;
+            
+            if ($existe) {
+                // Actualizar
+                $sqlUpdate = "UPDATE ffFacturasEnvio 
+                             SET estado = :estado,
+                                 fecha_envio = GETDATE()
+                             WHERE factura_id = :factura_id";
+                $stmt = $db->prepare($sqlUpdate);
+                return $stmt->execute([
+                    ':factura_id' => $facturaId,
+                    ':estado' => $estado
+                ]);
+            } else {
+                // Insertar
+                $sqlInsert = "INSERT INTO ffFacturasEnvio (factura_id, ncf, estado, fecha_envio)
+                             VALUES (:factura_id, :ncf, :estado, GETDATE())";
+                $stmt = $db->prepare($sqlInsert);
+                return $stmt->execute([
+                    ':factura_id' => $facturaId,
+                    ':ncf' => $ncf,
+                    ':estado' => $estado
+                ]);
+            }
+        } catch (Exception $e) {
+            error_log("Error en actualizarEstadoFactura: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
     public function processPost()
     {
         if (isset($_POST['enviar_factura'])) {
             try {
-            $facturaId = $_POST['factura_id'];
+                $facturaId = $_POST['factura_id'];
+                $ncf = $_POST['factura_ncf'];
                 $facturacionDA = DataAccessManager::get('Facturacion');
+                
+                // Verificar si la factura ya fue enviada
+                $estadoActual = $this->obtenerEstadoFactura($facturaId);
+                if ($estadoActual && $estadoActual['estado'] === 'PROCESADO') {
+                    $this->messages[] = [
+                        'type' => 'error',
+                        'text' => "La factura con NCF: $ncf ya fue procesada y no puede ser enviada nuevamente"
+                    ];
+                    return;
+                }
                 
                 // Generar el JSON
                 $jsonData = $facturacionDA->generarJsonEnvio($facturaId);
                 
-            $this->messages[] = "Factura $facturaId marcada para envío";
+                // Actualizar estado
+                $this->actualizarEstadoFactura($facturaId, $ncf);
                 
-                // Agregar script para mostrar el JSON
-                echo "<script>
-                    // Mostrar en consola
-                    console.log('JSON de la Factura $facturaId:');
-                    console.log(" . json_encode($jsonData) . ");
-                    
-                    // Mostrar alerta con el JSON formateado
-                    var jsonObj = JSON.parse(" . json_encode($jsonData) . ");
-                    var jsonStr = JSON.stringify(jsonObj, null, 2);
-                    alert('JSON generado para Factura $facturaId:\\n\\n' + jsonStr);
-                </script>";
+                $this->messages[] = [
+                    'type' => 'success',
+                    'text' => "Factura con NCF: $ncf marcada para envío"
+                ];
                 
             } catch (Exception $e) {
-                $this->messages[] = "Error al preparar la factura: " . $e->getMessage();
+                $this->messages[] = [
+                    'type' => 'error',
+                    'text' => "Error al preparar la factura: " . $e->getMessage()
+                ];
             }
         }
     }
@@ -40,11 +97,12 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
         $toReturn = "";
 
         if (count($this->messages) > 0) {
-            $toReturn .= "<div class='alert'>";
             foreach ($this->messages as $message) {
-                $toReturn .= "<p class='font-bold'>" . htmlspecialchars($message) . "</p>";
+                $class = ($message['type'] === 'success') ? 'success-alert' : 'error-alert';
+                $toReturn .= "<div class='alert $class'>";
+                $toReturn .= "<p class='font-bold'>" . htmlspecialchars($message['text']) . "</p>";
+                $toReturn .= "</div>";
             }
-            $toReturn .= "</div>";
         }
 
         return $toReturn;
@@ -130,17 +188,17 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
         
         // Construir condiciones WHERE basadas en los filtros
         if (!empty($_GET['filtro_cliente'])) {
-            $whereConditions[] = "FGEcli LIKE :cliente";
+            $whereConditions[] = "f.FGEcli LIKE :cliente";
             $params[':cliente'] = '%' . $_GET['filtro_cliente'] . '%';
         }
         
         if (!empty($_GET['filtro_ncf'])) {
-            $whereConditions[] = "FGEncf LIKE :ncf";
+            $whereConditions[] = "f.FGEncf LIKE :ncf";
             $params[':ncf'] = '%' . $_GET['filtro_ncf'] . '%';
         }
         
         if (!empty($_GET['filtro_fecha_inicio']) && !empty($_GET['filtro_fecha_fin'])) {
-            $whereConditions[] = "FGEfec BETWEEN :fecha_inicio AND :fecha_fin";
+            $whereConditions[] = "f.FGEfec BETWEEN :fecha_inicio AND :fecha_fin";
             $params[':fecha_inicio'] = $_GET['filtro_fecha_inicio'] . ' 00:00:00';
             $params[':fecha_fin'] = $_GET['filtro_fecha_fin'] . ' 23:59:59';
         }
@@ -150,8 +208,12 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
             $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
         }
         
-        // Obtener el total de facturas para la paginación
-        $sqlCount = "SELECT COUNT(*) as total FROM ffFactGral $whereClause";
+        // Consulta para contar el total de registros
+        $sqlCount = "SELECT COUNT(*) as total 
+                     FROM ffFactGral f 
+                     LEFT JOIN ffFacturasEnvio fe ON f.FGEseq = fe.factura_id 
+                     $whereClause";
+        
         $stmt = $db->prepare($sqlCount);
         $stmt->execute($params);
         $totalFacturas = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
@@ -159,13 +221,19 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
         // Calcular el offset
         $offset = ($pagina - 1) * $this->itemsPorPagina;
         
-        // Obtener las facturas de la página actual
-        $sql = "SELECT * FROM (
-                    SELECT *, ROW_NUMBER() OVER (ORDER BY FGEfec DESC) as row_num 
-                    FROM ffFactGral
+        // Consulta paginada para SQL Server
+        $sql = "SELECT f.*, fe.estado as estado_envio, fe.fecha_envio, 
+                       fe.fecha_recibido, fe.fecha_procesado
+                FROM (
+                    SELECT *, ROW_NUMBER() OVER (ORDER BY FGEfec DESC) as RowNum
+                    FROM ffFactGral f
                     $whereClause
-                ) as numbered 
-                WHERE row_num > $offset AND row_num <= " . ($offset + $this->itemsPorPagina);
+                ) as f
+                LEFT JOIN ffFacturasEnvio fe ON f.FGEseq = fe.factura_id
+                WHERE RowNum BETWEEN :start AND :end";
+        
+        $params[':start'] = $offset + 1;
+        $params[':end'] = $offset + $this->itemsPorPagina;
         
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
@@ -176,6 +244,18 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
             'total' => $totalFacturas,
             'paginas' => ceil($totalFacturas / $this->itemsPorPagina)
         ];
+    }
+
+    private function obtenerEstiloEstado($estado, $estadoEnvio) {
+        if ($estadoEnvio === 'PROCESADO') {
+            return 'background-color: #10B981; color: white;';
+        } elseif ($estadoEnvio === 'ENVIADO') {
+            return 'background-color: #3B82F6; color: white;';
+        } elseif ($estadoEnvio === 'RECIBIDO') {
+            return 'background-color: #6366F1; color: white;';
+        } else {
+            return 'background-color: #9CA3AF; color: white;';
+        }
     }
 
     public function renderBody()
@@ -197,12 +277,19 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
                 padding: 20px;
             }
             .alert {
-                background-color: rgb(255, 252, 252);
-                color: rgb(0, 0, 0);
-                border: 1px solid #f5c6cb;
                 padding: 10px;
                 margin-bottom: 20px;
                 border-radius: 5px;
+            }
+            .success-alert {
+                background-color: rgb(220, 252, 231);
+                color: rgb(22, 101, 52);
+                border: 1px solid #86efac;
+            }
+            .error-alert {
+                background-color: rgb(255, 252, 252);
+                color: rgb(0, 0, 0);
+                border: 1px solid #f5c6cb;
             }
             .table-container {
                 overflow-x: auto;
@@ -294,6 +381,37 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
                 color: #666;
                 font-size: 0.9em;
             }
+            .estado-badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                text-align: center;
+            }
+            .tooltip {
+                position: relative;
+                display: inline-block;
+            }
+            .tooltip .tooltiptext {
+                visibility: hidden;
+                width: 200px;
+                background-color: #333;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -100px;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .tooltip:hover .tooltiptext {
+                visibility: visible;
+                opacity: 1;
+            }
         </style>
 
         <div class="container">
@@ -326,7 +444,7 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
                 </div>
                 <div class="filter-group">
                     <button type="submit" class="btn-buscar">Buscar</button>
-            </div>
+                </div>
             </form>
 
             <div class="table-container">
@@ -339,11 +457,15 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
                             <th>Total</th>
                             <th>ITBIS</th>
                             <th>Estado</th>
+                            <th>Estado Envío</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($facturas as $factura): ?>
+                        <?php foreach ($facturas as $factura): 
+                            $estadoEnvio = $factura['estado_envio'] ?? 'PENDIENTE';
+                            $estiloEstado = $this->obtenerEstiloEstado($factura['FGEtip'], $estadoEnvio);
+                        ?>
                         <tr>
                             <td><?php echo htmlspecialchars($factura['FGEncf']); ?></td>
                             <td><?php echo htmlspecialchars($factura['FGEcli']); ?></td>
@@ -352,10 +474,33 @@ class EnvioFacturasHTMLPage extends GTKHTMLPage
                             <td><?php echo number_format($factura['FGEitb'], 2); ?></td>
                             <td><?php echo htmlspecialchars($factura['FGEtip']); ?></td>
                             <td>
+                                <div class="tooltip">
+                                    <span class="estado-badge" style="<?php echo $estiloEstado; ?>">
+                                        <?php echo htmlspecialchars($estadoEnvio); ?>
+                                    </span>
+                                    <?php if ($factura['fecha_envio']): ?>
+                                    <span class="tooltiptext">
+                                        Enviado: <?php echo $factura['fecha_envio']; ?><br>
+                                        <?php if ($factura['fecha_recibido']): ?>
+                                        Recibido: <?php echo $factura['fecha_recibido']; ?><br>
+                                        <?php endif; ?>
+                                        <?php if ($factura['fecha_procesado']): ?>
+                                        Procesado: <?php echo $factura['fecha_procesado']; ?>
+                                        <?php endif; ?>
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <?php if ($estadoEnvio !== 'PROCESADO'): ?>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="factura_id" value="<?php echo htmlspecialchars($factura['FGEseq']); ?>">
+                                    <input type="hidden" name="factura_ncf" value="<?php echo htmlspecialchars($factura['FGEncf']); ?>">
                                     <button type="submit" name="enviar_factura" class="btn-enviar">Enviar</button>
                                 </form>
+                                <?php else: ?>
+                                <span class="estado-badge" style="background-color: #059669;">Completada</span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

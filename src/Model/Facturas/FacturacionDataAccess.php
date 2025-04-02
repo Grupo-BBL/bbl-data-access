@@ -110,18 +110,18 @@ class FacturacionDataAccess extends DataAccess
     public function getFacturaPorNCF($ncf)
     {
         return $this->getOne("FGEncf", $ncf);
-    }
+}
 
-    /**
-     * Generar el JSON para envío a la API
-     */
-    public function generarJsonEnvio($facturaId)
-    {
-        // Obtener la factura
-        $factura = $this->getFacturaPorId($facturaId);
-        if (!$factura) {
-            throw new Exception("Factura no encontrada");
-        }
+/**
+ * Generar el JSON para envío a la API
+ */
+public function generarJsonEnvio($facturaId)
+{
+    // Obtener la factura
+    $factura = $this->getFacturaPorId($facturaId);
+    if (!$factura) {
+        throw new Exception("Factura no encontrada");
+    }
 
         error_log("Procesando factura: " . json_encode($factura));
 
@@ -162,46 +162,46 @@ class FacturacionDataAccess extends DataAccess
 
         error_log("Items procesados: " . json_encode($itemsProcesados));
 
-        // Construir el array para el JSON
-        $jsonData = [
-            "origen" => "Stonewood-app",
-            "factura" => [
+    // Construir el array para el JSON
+    $jsonData = [
+        "origen" => "Stonewood-app",
+        "factura" => [
                 "numero_factura" => $factura['FGEncf'],
-                "fecha_emision" => date('Y-m-d', strtotime($factura['FGEfec'])),
-                
-                "receptor" => [
-                    "tipo_documento" => $cliente['tipo_documento'] ?? 'RNC',
+            "fecha_emision" => date('Y-m-d', strtotime($factura['FGEfec'])),
+            
+            "receptor" => [
+                "tipo_documento" => $cliente['tipo_documento'] ?? 'RNC',
                     "numero_documento" => $cliente['stFCRNC_CED'] ?? $cliente['stCRNC'] ?? '',
                     "nombre" => $cliente['nombre'] ?? $factura['FGEncl'],
-                    "direccion" => $cliente['direccion'] ?? '',
-                    "telefono" => $cliente['telefono'] ?? '',
-                    "email" => $cliente['email'] ?? ''
-                ],
-
+                "direccion" => $cliente['direccion'] ?? '',
+                "telefono" => $cliente['telefono'] ?? '',
+                "email" => $cliente['email'] ?? ''
+            ],
+        
                 "items" => $itemsProcesados,
 
-                "totales" => [
-                    "subtotal" => floatval($factura['FGEtot']) - floatval($factura['FGEitb']),
-                    "descuento_global" => 0,
-                    "itbis" => floatval($factura['FGEitb']),
-                    "isc" => 0,
-                    "propina_legal" => 0,
-                    "total" => floatval($factura['FGEtot'])
-                ],
+            "totales" => [
+                "subtotal" => floatval($factura['FGEtot']) - floatval($factura['FGEitb']),
+                "descuento_global" => 0,
+                "itbis" => floatval($factura['FGEitb']),
+                "isc" => 0,
+                "propina_legal" => 0,
+                "total" => floatval($factura['FGEtot'])
+            ],
 
-                "condiciones_pago" => [
-                    "forma_pago" => $infoPago['forma_pago'] ?? '1',
-                    "plazo" => intval($infoPago['plazo'] ?? 0),
-                    "moneda" => $infoPago['moneda'] ?? 'DOP'
-                ],
+            "condiciones_pago" => [
+                "forma_pago" => $infoPago['forma_pago'] ?? '1',
+                "plazo" => intval($infoPago['plazo'] ?? 0),
+                "moneda" => $infoPago['moneda'] ?? 'DOP'
+            ],
 
-                "referencias" => [
-                    "orden_compra" => "",
-                    "pedido" => "",
-                    "otros_referencias" => []
-                ]
+            "referencias" => [
+                "orden_compra" => "",
+                "pedido" => "",
+                "otros_referencias" => []
             ]
-        ];
+        ]
+    ];
 
         error_log("JSON final: " . json_encode($jsonData));
         
@@ -212,9 +212,9 @@ class FacturacionDataAccess extends DataAccess
         } else {
             error_log("Error al enviar JSON a la API para la factura: " . $factura['FGEncf']);
         }
-        
-        return json_encode($jsonData, JSON_PRETTY_PRINT);
-    }
+
+    return json_encode($jsonData, JSON_PRETTY_PRINT);
+}
     
     /**
      * Enviar el JSON de factura al endpoint correspondiente
