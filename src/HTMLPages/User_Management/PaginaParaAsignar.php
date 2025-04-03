@@ -154,18 +154,114 @@ class PaginaParaAsignar extends GTKHTMLPage
 
             <?php echo $this->renderMessages(); ?>
 
+            <!-- Agregar CSS de Select2 -->
+            <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+            <style>
+                .select2-container {
+                    width: 25% !important;
+                }
+                .select2-container .select2-selection--single {
+                    height: 36px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                }
+                .select2-container--default .select2-selection--single .select2-selection__rendered {
+                    line-height: 36px;
+                    padding-right: 20px;
+                }
+                .select2-container--default .select2-selection--single .select2-selection__arrow {
+                    height: 34px;
+                    width: 30px;
+                }
+                .select2-container--default .select2-results__option--highlighted[aria-selected] {
+                    background-color: #007bff;
+                }
+                .select2-search__field {
+                    padding: 6px !important;
+                }
+                /* Ocultar el botón de limpiar */
+                .select2-container--default .select2-selection--single .select2-selection__clear {
+                    display: none !important;
+                }
+                .select2-container--default .select2-selection--single:focus {
+                    border-color: #007bff;
+                    outline: none;
+                    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+                }
+            </style>
+
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div class="mb-4">
                     <label for="uno" class="block text-gray-700 text-sm font-bold mb-2"><?php echo ucfirst($this->NombreDataAccessParaUno); ?>:</label>
-                    <select id="uno" name="uno" required class="mt-1 block w-full border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" onchange="this.form.submit()">
+                    <select id="uno" name="uno" required class="select2-search">
                         <option value="">Seleccione un <?php echo ucfirst($this->NombreDataAccessParaUno); ?></option>
-                        <?php foreach ($unos as $uno): ?>
-                            <option value="<?php echo htmlspecialchars($uno['id']); ?>" <?php echo $selectedUno == $uno['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($this->NombreDataAccessParaUno == 'persona' ? $uno['email'] : $uno['name']); ?></option>
+                        <?php 
+                        // Ordenar el array por nombre/email
+                        usort($unos, function($a, $b) {
+                            $aValue = $this->NombreDataAccessParaUno == 'persona' ? $a['email'] : $a['name'];
+                            $bValue = $this->NombreDataAccessParaUno == 'persona' ? $b['email'] : $b['name'];
+                            return strcasecmp($aValue, $bValue);
+                        });
+                        
+                        foreach ($unos as $uno): 
+                            $displayValue = $this->NombreDataAccessParaUno == 'persona' ? $uno['email'] : $uno['name'];
+                        ?>
+                            <option value="<?php echo htmlspecialchars($uno['id']); ?>" 
+                                    <?php echo $selectedUno == $uno['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($displayValue); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <input type="hidden" name="page" value="<?php echo $currentPage; ?>">
             </form>
+
+            <!-- Agregar jQuery y Select2 JS -->
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    $('.select2-search').select2({
+                        placeholder: 'Buscar...',
+                        allowClear: false,
+                        width: '100%',
+                        language: {
+                            noResults: function() {
+                                return "No se encontraron resultados";
+                            },
+                            searching: function() {
+                                return "Buscando...";
+                            }
+                        },
+                        matcher: function(params, data) {
+                            // Si no hay término de búsqueda, mostrar la opción
+                            if ($.trim(params.term) === '') {
+                                return data;
+                            }
+
+                            // No mostrar la opción si no hay texto
+                            if (typeof data.text === 'undefined') {
+                                return null;
+                            }
+
+                            // Búsqueda case-insensitive y con acentos
+                            const normalizedTerm = params.term.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            const normalizedText = data.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                            // Si el texto contiene el término de búsqueda, mostrar la opción
+                            if (normalizedText.indexOf(normalizedTerm) > -1) {
+                                return data;
+                            }
+
+                            // Si no hay coincidencia, no mostrar la opción
+                            return null;
+                        }
+                    }).on('select2:select', function(e) {
+                        // Enviar el formulario cuando se seleccione una opción
+                        $(this).closest('form').submit();
+                    });
+                });
+            </script>
 
             <?php if ($selectedUno): ?>
             <h2 class="text-xl font-bold mb-4"><?php echo ucfirst($this->NombreDataAccessParaMuchos); ?> Asignados</h2>

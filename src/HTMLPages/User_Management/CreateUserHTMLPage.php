@@ -162,6 +162,66 @@ class CreateUserHTMLPage extends GTKHTMLPage
                 margin-bottom: 15px;
                 border-radius: 5px;
             }
+            /* Nuevos estilos para los roles */
+            .roles-container {
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                padding: 10px;
+                margin-top: 5px;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            .roles-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                border-bottom: 2px solid #007bff;
+                padding-bottom: 5px;
+            }
+            .roles-title {
+                font-weight: bold;
+                color: #333;
+            }
+            .roles-search {
+                flex: 1;
+                margin-left: 10px;
+                max-width: 200px;
+                padding: 4px 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            .roles-search:focus {
+                border-color: #007bff;
+                outline: none;
+                box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+            }
+            .role-item.hidden {
+                display: none;
+            }
+            .role-item {
+                display: flex;
+                align-items: center;
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+            .role-item:last-child {
+                border-bottom: none;
+            }
+            .role-item input[type="checkbox"] {
+                width: auto;
+                margin-right: 10px;
+            }
+            .role-item label {
+                margin: 0;
+                font-weight: normal;
+                cursor: pointer;
+                flex: 1;
+            }
+            .role-item:hover {
+                background-color: #f8f9fa;
+            }
         </style>
     
         <div class="container">
@@ -195,13 +255,25 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             <input type="password" name="users[0][password]" required>
                         </div>
                         <div class="form-group">
-                            <label for="role_ids">Roles:</label>
-                            <?php foreach ($roles as $role): ?>
-                                <div>
-                                    <input type="checkbox" name="users[0][role_ids][]" value="<?php echo htmlspecialchars($role['id']); ?>">
-                                    <?php echo htmlspecialchars($role['name']); ?>
-                                </div>
-                            <?php endforeach; ?>
+                            <div class="roles-header">
+                                <div class="roles-title">Roles:</div>
+                                <input type="text" 
+                                       class="roles-search" 
+                                       placeholder="Buscar roles..."
+                                       oninput="filterRoles(this, 0)">
+                            </div>
+                            <div class="roles-container">
+                                <?php foreach ($roles as $role): ?>
+                                    <div class="role-item" data-role-name="<?php echo htmlspecialchars(strtolower($role['name'])); ?>">
+                                        <input type="checkbox" id="role_<?php echo htmlspecialchars($role['id']); ?>" 
+                                               name="users[0][role_ids][]" 
+                                               value="<?php echo htmlspecialchars($role['id']); ?>">
+                                        <label for="role_<?php echo htmlspecialchars($role['id']); ?>">
+                                            <?php echo htmlspecialchars($role['name']); ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -246,17 +318,45 @@ class CreateUserHTMLPage extends GTKHTMLPage
                         <input type="password" name="users[${userFormCount}][password]" required>
                     </div>
                     <div class="form-group">
-                        <label for="role_ids">Roles:</label>
-                        <?php foreach ($roles as $role): ?>
-                            <div>
-                                <input type="checkbox" name="users[${userFormCount}][role_ids][]" value="<?php echo htmlspecialchars($role['id']); ?>">
-                                <?php echo htmlspecialchars($role['name']); ?>
-                            </div>
-                        <?php endforeach; ?>
+                        <div class="roles-header">
+                            <div class="roles-title">Roles:</div>
+                            <input type="text" 
+                                   class="roles-search" 
+                                   placeholder="Buscar roles..."
+                                   oninput="filterRoles(this, ${userFormCount})">
+                        </div>
+                        <div class="roles-container">
+                            <?php foreach ($roles as $role): ?>
+                                <div class="role-item" data-role-name="<?php echo htmlspecialchars(strtolower($role['name'])); ?>">
+                                    <input type="checkbox" 
+                                           id="role_${userFormCount}_<?php echo htmlspecialchars($role['id']); ?>"
+                                           name="users[${userFormCount}][role_ids][]" 
+                                           value="<?php echo htmlspecialchars($role['id']); ?>">
+                                    <label for="role_${userFormCount}_<?php echo htmlspecialchars($role['id']); ?>">
+                                        <?php echo htmlspecialchars($role['name']); ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 `;
                 userFormsContainer.appendChild(newUserForm);
                 userFormCount++;
+            }
+
+            function filterRoles(input, formIndex) {
+                const searchTerm = input.value.toLowerCase();
+                const container = input.closest('.form-group').querySelector('.roles-container');
+                const roleItems = container.querySelectorAll('.role-item');
+
+                roleItems.forEach(item => {
+                    const roleName = item.getAttribute('data-role-name');
+                    if (roleName.includes(searchTerm)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
             }
 
             document.getElementById('excel_file').addEventListener('change', function(event) {

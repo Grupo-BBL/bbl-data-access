@@ -126,4 +126,58 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
         "class" => "DataAccessAuditTrail",
 		"db" => "appDB"
 	],
+    //////////////////////////////////////////
+    // - 
+    // - Facturación
+    // - 
+    //////////////////////////////////////////
+    "Facturacion" => [
+        "class"                    => "FacturacionDataAccess",
+        "db"                      => "oldStoneDB",
+        "tableName"               => "ffFactGral",
+        "defaultOrderByColumnKey" => "FGEfec",
+        "defaultOrderByOrder"     => "DESC",
+        "singleItemName"          => "Factura",
+        "pluralItemName"          => "Facturas"
+    ],
+
+"FacturacionItems" => [
+    "class"                    => "FacturacionItemsDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffItemsFG",
+    "defaultOrderByColumnKey" => "yFGEseq",
+    "defaultOrderByOrder"     => "ASC",
+    "singleItemName"          => "Item de Factura",
+    "pluralItemName"          => "Items de Factura"
+],
+
+"Cliente" => [
+    "class"                    => "ClienteDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "FCLIENTE",
+    "defaultOrderByColumnKey" => "stCCODE",
+    "defaultOrderByOrder"     => "ASC",
+    "singleItemName"          => "Cliente",
+    "pluralItemName"          => "Clientes"
+],
+
+"FacturacionAuxiliar" => [
+    "class"                    => "FacturacionAuxiliarDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffAuxiliar",
+    "defaultOrderByColumnKey" => "AUXcod",
+    "defaultOrderByOrder"     => "ASC",
+    "singleItemName"          => "Auxiliar",
+    "pluralItemName"          => "Auxiliares"
+],
+
+"FacturacionPago" => [
+    "class"                    => "FacturacionPagoDataAccess",
+    "db"                      => "oldStoneDB",
+    "tableName"               => "ffFactGral", // Misma tabla, diferentes campos
+    "defaultOrderByColumnKey" => "FGEseq",
+    "defaultOrderByOrder"     => "DESC",
+    "singleItemName"          => "Pago de Factura",
+    "pluralItemName"          => "Pagos de Factura"
+]
 ];
