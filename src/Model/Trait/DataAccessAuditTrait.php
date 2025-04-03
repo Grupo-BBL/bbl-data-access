@@ -3,14 +3,11 @@
 trait DataAccessAuditTrait 
 {
     protected function recordAudit(string $action, $recordId, ?array $changes = null) 
-    {
-        $auditTrail = DAM::get('data_access_audit_trail');
-        
-        // Get current user if available
-        $user = null;
-        $user = DAM::get("session")->getCurrentUser();
-        if (method_exists($this, 'getCurrentUser')) {
-            $user = $this->getCurrentUser();
+    {        
+        if (true)
+        {
+            error_log("Ignoring recordAudit");
+            return;
         }
 
         $dataAccessName = get_class($this);
@@ -26,17 +23,20 @@ trait DataAccessAuditTrait
             return;
         }   
 
+
+        $auditTrail = DAM::get('data_access_audit_trail');
+        
+        // Get current user if available
+        $user      = DAM::get("session")->getCurrentUser();
+        $userID    = null;
+        $userEmail = null;
+
+        
         if ($user)
         {
-            $userID = DAM::get("persona")->identifierForItem($user);
+            $userID    = DAM::get("persona")->identifierForItem($user);
             $userEmail = DAM::get("persona")->valueForKey("email", $user);
         }
-        else
-        {
-            $userID = null;
-            $userEmail = null;
-        }
-
         $toInsert = [
             'data_access_name' => $dataAccessName,
             'record_id'        => $recordId,

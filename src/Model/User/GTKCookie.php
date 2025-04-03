@@ -165,10 +165,14 @@ class GTKCookie
             $httponly = true;
         }
 
+        /*
         // Determine if connection is secure based on HTTPS or secure port
         $isSecureConnection = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
                 (isset($_SERVER['SERVER_PORT']) && in_array($_SERVER['SERVER_PORT'], [443, 4433]));
 
+        */
+        $isSecureConnection = false;
+        
         $secure = $options["secure"] ?? $isSecureConnection;
 
 

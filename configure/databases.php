@@ -45,9 +45,10 @@ $_GLOBALS["GTK_DATA_ACCESS_CONSTRUCTIONS"] = [
 		"db"          => "appDB",
 	],
 	"role_person_relationships" => [
-		"class" => "RolePersonRelationshipsDataAccess",                  
-		"db" 	=> "appDB",
-		"synonyms" => [
+		"class"     => "RolePersonRelationshipsDataAccess",                  
+		"db" 	    => "appDB",
+		"tableName" => "role_person_relationships",
+		"synonyms"  => [
 			"role_person_relationship",
 			"role_person_relationships",
 			"flat_roles",

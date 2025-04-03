@@ -1,10 +1,5 @@
 <?php
 
-use function Deployer\error;
-use function PHPUnit\Framework\isEmpty;
-use function PHPUnit\Framework\throwException;
-
-
 if (!function_exists("gtk_log"))
 {
 

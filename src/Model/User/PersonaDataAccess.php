@@ -893,7 +893,7 @@ class PersonaDataAccess extends DataAccess
     
     if (!$user)
 	{
-        return [];
+        return ["public",];
     }
 
     $roles = DataAccessManager::get("role_person_relationships")->rolesForUser($user);
@@ -1106,9 +1106,12 @@ class PersonaDataAccess extends DataAccess
 			$user = $this->getOne("email", $cedulaOrUsername);
 			
 			// If not found, check for email aliases
-			if (!$user && DAM::get("person_email_aliases")) {
+			if (!$user && DAM::get("person_email_aliases")) 
+			{
 				$personId = DAM::get("person_email_aliases")->findPersonByEmail($cedulaOrUsername);
-				if ($personId) {
+				
+				if ($personId) 
+				{
 					$user = $this->getOne("id", $personId);
 				}
 			}
