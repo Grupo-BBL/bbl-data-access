@@ -263,16 +263,16 @@ class CreateUserHTMLPage extends GTKHTMLPage
                                        oninput="filterRoles(this, 0)">
                             </div>
                             <div class="roles-container">
-                                <?php foreach ($roles as $role): ?>
+                            <?php foreach ($roles as $role): ?>
                                     <div class="role-item" data-role-name="<?php echo htmlspecialchars(strtolower($role['name'])); ?>">
                                         <input type="checkbox" id="role_<?php echo htmlspecialchars($role['id']); ?>" 
                                                name="users[0][role_ids][]" 
                                                value="<?php echo htmlspecialchars($role['id']); ?>">
                                         <label for="role_<?php echo htmlspecialchars($role['id']); ?>">
-                                            <?php echo htmlspecialchars($role['name']); ?>
+                                    <?php echo htmlspecialchars($role['name']); ?>
                                         </label>
-                                    </div>
-                                <?php endforeach; ?>
+                                </div>
+                            <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
@@ -326,17 +326,17 @@ class CreateUserHTMLPage extends GTKHTMLPage
                                    oninput="filterRoles(this, ${userFormCount})">
                         </div>
                         <div class="roles-container">
-                            <?php foreach ($roles as $role): ?>
+                        <?php foreach ($roles as $role): ?>
                                 <div class="role-item" data-role-name="<?php echo htmlspecialchars(strtolower($role['name'])); ?>">
                                     <input type="checkbox" 
                                            id="role_${userFormCount}_<?php echo htmlspecialchars($role['id']); ?>"
                                            name="users[${userFormCount}][role_ids][]" 
                                            value="<?php echo htmlspecialchars($role['id']); ?>">
                                     <label for="role_${userFormCount}_<?php echo htmlspecialchars($role['id']); ?>">
-                                        <?php echo htmlspecialchars($role['name']); ?>
+                                <?php echo htmlspecialchars($role['name']); ?>
                                     </label>
-                                </div>
-                            <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
                         </div>
                     </div>
                 `;

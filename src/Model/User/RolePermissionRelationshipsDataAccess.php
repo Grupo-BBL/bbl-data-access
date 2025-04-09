@@ -4,9 +4,15 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
 {
     public $cache;
 
-    public function register()
+    public function __construct(PDO $PDODBObject, $options)
     {
-            $columnMappings = [
+        $this->setTableName("role_permission_relationships");
+        parent::__construct($PDODBObject, $options);
+    }
+
+    public function getFreshColumnMappings()
+    {
+        return [
 			new GTKColumnMapping($this, "role_permission_relationship_id", [
                 "formLabel" => "ID",
                 "isPrimaryKey" => true, 
@@ -27,151 +33,146 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
 			new GTKColumnMapping($this, "date_created"),
 			new GTKColumnMapping($this, "date_modified"),
 		];
-
-		$this->dataMapping = new GTKDataSetMapping($this, $columnMappings);
-    }
-
-    public function migrate()
-    {
-        $this->getDB()->query("CREATE TABLE IF NOT EXISTS {$this->tableName()} 
-        (role_permission_relationship_id INTEGER PRIMARY KEY,
-         role_id,
-         permission_id, 
-         comments,
-         is_active,
-         date_created,
-         date_modified,
-        UNIQUE(role_permission_relationship_id))");
-
-        // $this->getDB()->query("ALTER TABLE ".$this->tableName()." ADD COLUMN qualifiers;");
-        $this->addColumnIfNotExists("qualifiers");
-
     }
 
     public function permissionRelationsForRole($role)
     {
+        try {
         $debug = false;
 
-        $roleID = null;
+            // Obtener el ID del rol
+            $roleID = is_string($role) || is_numeric($role) 
+                ? $role 
+                : DataAccessManager::get('roles')->identifierForItem($role);
 
-        if (is_string($role) || is_numeric($role))
-        {
-            $roleID = $role;
+            if ($debug) {
+                error_log("Role ID: $roleID");
+            }
+
+            // Construir la consulta
+            $query = new SelectQuery($this);
+            $query->where('role_id', '=', $roleID)
+                  ->where('is_active', '=', true);
+
+            if ($debug) {
+                error_log("Query SQL: " . $query->sql());
+            }
+
+            return $query->executeAndReturnAll();
+
+        } catch (Exception $e) {
+            error_log("Error en permissionRelationsForRole: " . $e->getMessage());
+            throw $e;
         }
-        else
-        {
-            $roleID = DataAccessManager::get('roles')->identifierForItem($role);
-        }
-        
-        if ($debug)
-        {
-            gtk_log("Role ID: $roleID");
-        }
-
-        $query = new SelectQuery($this);
-
-        $query->where(new WhereClause(
-            "role_id", "=", $roleID
-        ));
-
-        /*
-        $isActiveClause = new WhereGroup("OR");
-
-        $isActiveClause->where(new WhereClause(
-            "is_active", "=",  true
-        ));
-
-        $isActiveClause->where(new WhereClause(
-            "is_active", "=",  "1"
-        ));
-
-        $query->where($isActiveClause);
-        */
-
-        if ($debug)
-        {
-            gtk_log("Query Count : ".$query->count());
-            gtk_log("Query SQL   : ".$query->sql());
-        }
-
-        $result = $query->executeAndReturnAll();
-
-        return $result;
     }
 
     public function permissionsForRole($role)
     {
+        try {
         $debug = false;
 
-        if (is_string($role) || is_numeric($role))
-        {
-            $roleID = $role;
-        }
-        else
-        {
-            $roleID = DataAccessManager::get('roles')->identifierForItem($role);
-        }
-        
-        if ($debug)
-        {
-            gtk_log("Role ID: $roleID");
-        }
-
-        if (isset($this->cache[$roleID]))
-        {
-            if ($debug)
-            {
-                gtk_log("Returning from cache: ".print_r($this->cache[$roleID], true));
+            // Obtener el ID del rol
+            $roleID = is_string($role) || is_numeric($role) 
+                ? $role 
+                : DataAccessManager::get('roles')->identifierForItem($role);
+            
+            if ($debug) {
+                error_log("Buscando permisos para rol ID: " . $roleID);
             }
-            return $this->cache[$roleID];
-        }
 
-        $permissionRelationsForRole = $this->permissionRelationsForRole($role);
-
-        $permissionIDS = [];
-
-        foreach ($permissionRelationsForRole as $permissionRelation)
-        {
-            if ($debug)
-            {
-                gtk_log("Permission Relations: ".print_r($permissionRelation, true));
+            // Verificar caché
+            if (isset($this->cache[$roleID])) {
+                if ($debug) {
+                    error_log("Retornando desde caché");
+                }
+                return $this->cache[$roleID];
             }
-            $permissionIDS[] = $permissionRelation["permission_id"];
-        }
 
-        if ($debug)
-        {
-            gtk_log("Permission IDs fpr Role (".serialize($role).") - : ".print_r($permissionIDS, true));
-        }
+            $permissionRelations = $this->permissionRelationsForRole($role);
 
-        $permissions = DataAccessManager::get('permissions')->getByIdentifier($permissionIDS);    
-
-        if ($debug)
-        {
-            gtk_log("Got Permissions: ".print_r($permissions, true));
-        }
-
-        $toReturn = [];
-
-        foreach ($permissions as $permission)
-        {
-            if ($debug)
-            {
-                gtk_log("Permission: ".print_r($permission, true));
+            if (empty($permissionRelations)) {
+                if ($debug) {
+                    error_log("No se encontraron relaciones de permisos");
+                }
+                return [];
             }
-            $toReturn[] = $permission["name"];
+
+            // Extraer IDs de permisos
+            $permissionIDs = array_column($permissionRelations, 'permission_id');
+
+            if (empty($permissionIDs)) {
+                if ($debug) {
+                    error_log("No se encontraron IDs de permisos");
+                }
+                return [];
+            }
+
+            // Obtener los permisos
+            $permissions = DataAccessManager::get('permissions')->getByIdentifier($permissionIDs);
+
+            if ($debug) {
+                error_log("Permisos encontrados: " . json_encode($permissions));
+            }
+
+            // Extraer nombres de permisos
+            $permissionNames = array_column($permissions, 'name');
+
+            // Guardar en caché
+            $this->cache[$roleID] = $permissionNames;
+
+            return $permissionNames;
+
+        } catch (Exception $e) {
+            error_log("Error en permissionsForRole: " . $e->getMessage());
+            throw $e;
         }
-
-        if ($debug)
-        {
-            gtk_log("Will return: Permissions: ".print_r($toReturn, true));
-        }
-
-        $this->cache[$roleID] = $toReturn;
-
-        return $toReturn;
     }
 
+    public function getPermissionRelationshipForRolePermission($roleIDOrNameOrObject, $permissionNameOrIDOrObject)
+    {
+        try {
+            // Obtener ID del permiso
+            $permissionID = null;
+            if (is_numeric($permissionNameOrIDOrObject)) {
+                $permissionID = $permissionNameOrIDOrObject;
+            } else if (is_string($permissionNameOrIDOrObject)) {
+                $permission = DataAccessManager::get("permissions")->whereOne("name", $permissionNameOrIDOrObject);
+                $permissionID = $permission["id"];
+            } else if (is_array($permissionNameOrIDOrObject)) {
+                $permissionID = $permissionNameOrIDOrObject["id"];
+            }
+
+            if (!$permissionID) {
+                throw new Exception("No se pudo determinar el ID del permiso");
+            }
+
+            // Obtener ID del rol
+            $roleID = null;
+            if (is_numeric($roleIDOrNameOrObject)) {
+                $roleID = $roleIDOrNameOrObject;
+            } else if (is_string($roleIDOrNameOrObject)) {
+                $role = DataAccessManager::get("roles")->whereOne("name", $roleIDOrNameOrObject);
+                $roleID = $role["id"];
+            } else if (is_array($roleIDOrNameOrObject)) {
+                $roleID = $roleIDOrNameOrObject["id"];
+            }
+
+            if (!$roleID) {
+                throw new Exception("No se pudo determinar el ID del rol");
+            }
+
+            // Construir y ejecutar la consulta
+            $query = new SelectQuery($this);
+            $query->where('permission_id', '=', $permissionID)
+                  ->where('role_id', '=', $roleID);
+
+            return $query->executeAndReturnOne();
+
+        } catch (Exception $e) {
+            error_log("Error en getPermissionRelationshipForRolePermission: " . $e->getMessage());
+            throw $e;
+        }
+    }
 
     public function selectForRole($role)
     {
@@ -204,64 +205,5 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
         }
 
         return $toReturn;
-    }
-
-    public function getPermissionRelationshipForRolePermission($roleIDOrNameOrObject, $permissionNameOrIDOrObject)
-    {
-        $query = new SelectQuery($this);
-        
-        $permissionID = null;
-
-        if (is_numeric($permissionNameOrIDOrObject))
-        {
-            $permissionID = $permissionNameOrIDOrObject;
-        }
-        else if (is_string($permissionNameOrIDOrObject))
-        {
-            $permission = DataAccessManager::get("permissions")->where("name", $permissionNameOrIDOrObject);
-            $permissionID = $permission["id"];
-        }
-        else if (is_array($permissionNameOrIDOrObject))
-        {
-            $permissionID = $permissionNameOrIDOrObject["id"];
-        }
-
-        if (!$permissionID)
-        {
-            throw new Exception("Permission with ID or Name does not exist: ".$permissionNameOrIDOrObject);
-        }
-
-        $query->addWhereClause(new WhereClause(
-            "permission_id", "=", $permissionID
-        ));
-
-        $roleID = null;
-
-        if (is_numeric($roleIDOrNameOrObject))
-        {
-            $roleID = $roleIDOrNameOrObject;
-        }
-        else if (is_string($roleIDOrNameOrObject))
-        {
-            $role = DataAccessManager::get("roles")->where("name", $roleIDOrNameOrObject);
-            $roleID = $role["id"];
-        }
-        else if (is_array($roleIDOrNameOrObject))
-        {
-            $roleID = $roleIDOrNameOrObject["id"];
-        }
-
-        if (!$roleID)
-        {
-            throw new Exception("Role with ID or Name does not exist: ".$roleIDOrNameOrObject);
-        }
-
-        $query->addWhereClause(new WhereClause(
-            "role_id", "=", $roleID
-        ));
-
-        $permissionRelationship = $query->executeAndReturnOne();
-
-        return $permissionRelationship;
     }
 }

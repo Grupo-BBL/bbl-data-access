@@ -518,79 +518,48 @@ class SelectQuery implements IteratorAggregate,
 
     public function didAddOrderByToSQL(&$sql)
     {
-        $debug = false;
-
-        if (is_array($this->_orderBy) && (count($this->_orderBy) > 0))
-        {
-            $sql .= ' ORDER BY ';
-            $isFirst = true;
-            $isEven  = false;
-            foreach ($this->_orderBy as $orderBy) 
-            {
-                if ($debug)
-                {
-                    error_log("Handling order by case: ".print_r($orderBy,true));
-                }
-                if (!$isFirst)
-                {
-                    $sql .= ', ';
-                }
-                $isFirst = false;
-
-                if (is_string($orderBy))
-                {
-                    $sql .= $this->dbColumnNameForKey($orderBy)." ASC";
-                }
-                else if (is_array($orderBy) && (count($orderBy) == 2))
-                {
-
-                    $sql .= $this->dbColumnNameForKey($orderBy[0])." ".$orderBy[1];
-                }
-                else if ($orderBy instanceof OrderBy)
-                {
-                    $sql .= $this->dbColumnNameForKey($orderBy->column)." ".$orderBy->order;
-                }
-                else
-                {
-                    throw new Exception("Don't know how to handle ORDER BY object of gtype: ".get_class($orderBy));
-                }
-                
-
-                $isEven = !$isEven;
+        if (empty($this->_orderBy)) {
+            // Si no hay orderBy definido, usar el default del dataSource
+            if ($this->dataSource && $this->dataSource->defaultOrderByColumnKey) {
+                $sql .= " ORDER BY " . $this->dataSource->defaultOrderByColumnKey;
+                $sql .= " " . ($this->dataSource->defaultOrderByOrder ?? "DESC");
+                return true;
             }
-
-            return true;
+            return false;
         }
-        else if (is_string($this->_orderBy))
-        {
-            // if string contains ASC or DESC, use it as is, otherwise default to DESC
-            if (strpos($this->_orderBy, 'ASC') !== false || strpos($this->_orderBy, 'DESC') !== false)
-            {
-                $orderByColumn = str_split($this->_orderBy, ' ')[0];
-                $orderByOrder  = str_split($this->_orderBy, ' ')[1];
 
-                $sql .= ' ORDER BY '.$this->dbColumnNameForKey($orderByColumn)." ".$orderByOrder;
+        $sql .= ' ORDER BY ';
+        $orderByParts = [];
+
+        if (is_array($this->_orderBy)) {
+            foreach ($this->_orderBy as $orderBy) {
+                if (is_string($orderBy)) {
+                    $orderByParts[] = $this->dbColumnNameForKey($orderBy) . " ASC";
+                } 
+                else if (is_array($orderBy) && count($orderBy) == 2) {
+                    $orderByParts[] = $this->dbColumnNameForKey($orderBy[0]) . " " . $orderBy[1];
+                }
+                else if ($orderBy instanceof OrderBy) {
+                    $orderByParts[] = $this->dbColumnNameForKey($orderBy->column) . " " . $orderBy->order;
+                }
             }
-            else
-            {
-                $sql .= ' ORDER BY '.$this->dbColumnNameForKey($this->_orderBy)." DESC";
+        }
+        else if (is_string($this->_orderBy)) {
+            if (strpos($this->_orderBy, ' ') !== false) {
+                list($column, $direction) = explode(' ', $this->_orderBy, 2);
+                $orderByParts[] = $this->dbColumnNameForKey($column) . " " . $direction;
+            } else {
+                $orderByParts[] = $this->dbColumnNameForKey($this->_orderBy) . " DESC";
             }
-            
-            return true;
         }
-        else if ($this->_orderBy instanceof OrderBy)
-        {
-            $sql .= ' ORDER BY '.$this->dbColumnNameForKey($this->_orderBy->column)." ".$this->_orderBy->order;
-            
-            return true;
-        }
-        else if ($this->dataSource->defaultOrderByColumnKey)
-        {
-            $sql .= " ORDER BY ".$this->dataSource->defaultOrderByColumnKey." ".($this->dataSource->defaultOrderByOrder ?? "DESC");
-            
-            return true;
+        else if ($this->_orderBy instanceof OrderBy) {
+            $orderByParts[] = $this->dbColumnNameForKey($this->_orderBy->column) . " " . $this->_orderBy->order;
         }
 
+        if (!empty($orderByParts)) {
+            $sql .= implode(', ', $orderByParts);
+            return true;
+        }
 
         return false;
     }

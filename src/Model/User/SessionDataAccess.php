@@ -445,7 +445,7 @@ class SessionDataAccess extends DataAccess
 		$statement->bindValue(':session_guid', $session_value);
 		$statement->bindValue(':user_id',     			DataAccessManager::get("persona")->valueForIdentifier($user));
 		$statement->bindValue(':created_at', 		 	date(DATE_ATOM));
-		$statement->bindValue(':valid_until', 			time() + $defaultSessionLength);
+		$statement->bindValue(':valid_until', 			'2026-04-03 12:00:00');
 		$statement->bindValue(':canceled', 	  			0);
 		
 		// Execute the INSERT statement
