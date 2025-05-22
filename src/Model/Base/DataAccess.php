@@ -3095,6 +3095,38 @@ abstract class DataAccess /* implements Serializable */
         return $dias;
     }
 
+    public function tieneArchivosRecientes($idLinea, $dias = 30) {
+        $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
+        
+        $sql = "SELECT COUNT(*) FROM autorizaciones_para_despachar 
+                WHERE id_linea = ? 
+                AND fecha_agregado >= ?";
+                
+        $stmt = $this->getPDO()->prepare($sql);
+        $stmt->execute([$idLinea, $fechaLimite]);
+        return $stmt->fetchColumn() > 0;
+    }
+    
+    public function contenedorEnManifiestoReciente($idLinea, $numeroContenedor, $dias = 30) {
+        $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
+        
+        $sql = "SELECT * FROM autorizaciones_para_despachar 
+                WHERE id_linea = ? 
+                AND fecha_agregado >= ?
+                AND container_number = ?";
+                
+        $stmt = $this->getPDO()->prepare($sql);
+        $stmt->execute([$idLinea, $fechaLimite, $numeroContenedor]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    public function lineaSubeArchivos($idLinea) {
+        $sql = "SELECT COUNT(*) FROM autorizaciones_para_despachar WHERE id_linea = ?";
+        $stmt = $this->getPDO()->prepare($sql);
+        $stmt->execute([$idLinea]);
+        return $stmt->fetchColumn() > 0;
+    }
+
     // MARK: - INSERT
 
     public function insertSqlWithPHPKeys($item, $debug = false)
