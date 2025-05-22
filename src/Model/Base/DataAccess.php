@@ -5258,4 +5258,12 @@ abstract class DataAccess /* implements Serializable */
             'mensaje' => "Línea {$row['FLNOMBRE']} autorizada para crear conduce"
         ];
     }
+
+    public function getDistinctOrigenes() {
+        $sql = "SELECT DISTINCT origen FROM autorizaciones_para_despachar WHERE origen IS NOT NULL";
+        $stmt = $this->getPDO()->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $result;
+    }
 }
