@@ -3077,6 +3077,24 @@ abstract class DataAccess /* implements Serializable */
         return $result;
     }
 
+    public function diasDesdeUltimoArchivoPorOrigen($origen) {
+        $sql = "SELECT MAX(fecha_agregado) AS ultima_fecha
+                FROM autorizaciones_para_despachar
+                WHERE origen = :origen";
+        $stmt = $this->getPDO()->prepare($sql);
+        $stmt->execute(['origen' => $origen]);
+        $row = $stmt->fetch();
+    
+        if (!$row || !$row['ultima_fecha']) {
+            return null; // Nunca se ha subido archivo para este origen
+        }
+    
+        $ultimaFecha = new DateTime($row['ultima_fecha']);
+        $ahora = new DateTime();
+        $dias = $ahora->diff($ultimaFecha)->days;
+        return $dias;
+    }
+
     // MARK: - INSERT
 
     public function insertSqlWithPHPKeys($item, $debug = false)
@@ -5212,4 +5230,32 @@ abstract class DataAccess /* implements Serializable */
 		</table>
 		<?php return ob_get_clean(); // End output buffering and get the buffered content as a string
 	}
+
+    public function puedeCrearConduce($flcodigo) {
+        $sql = "SELECT autorizacion_despacho, FLNOMBRE
+                FROM flineas
+                WHERE FLCODIGO = :flcodigo";
+        $stmt = $this->getPDO()->prepare($sql);
+        $stmt->execute(['flcodigo' => $flcodigo]);
+        $row = $stmt->fetch();
+    
+        if (!$row) {
+            return [
+                'puede_crear' => false,
+                'mensaje' => 'No se encontró la línea naviera especificada'
+            ];
+        }
+    
+        if (!$row['autorizacion_despacho']) {
+            return [
+                'puede_crear' => false,
+                'mensaje' => "La línea {$row['FLNOMBRE']} no tiene autorización de despacho vigente"
+            ];
+        }
+    
+        return [
+            'puede_crear' => true,
+            'mensaje' => "Línea {$row['FLNOMBRE']} autorizada para crear conduce"
+        ];
+    }
 }
