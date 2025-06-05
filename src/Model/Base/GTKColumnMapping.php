@@ -948,7 +948,7 @@ class GTKColumnMapping extends GTKColumnBase
             return '';
         }
 
-        $columnDef = null;
+        $columnDef = '';
 
         switch ($driver)
         {
@@ -962,13 +962,16 @@ class GTKColumnMapping extends GTKColumnBase
                 $columnDef .= "IDENTITY(1,1) ";
                 break;
             case 'sqlite':
-                $columnDef .= "AUTOINCREMENT ";
+                // En SQLite, AUTOINCREMENT solo puede usarse con INTEGER PRIMARY KEY
+                // Si la columna no es PRIMARY KEY, no aplicamos AUTOINCREMENT
+                if ($this->isPrimaryKey()) {
+                    $columnDef .= "AUTOINCREMENT ";
+                }
+                // Si no es PRIMARY KEY, simplemente no agregamos AUTOINCREMENT
+                // SQLite ignorará la propiedad isAutoIncrement para columnas que no sean PRIMARY KEY
                 break;
-        }
-
-        if (!$columnDef)
-        {
-            throw new Exception("No AUTO-INCREMENT syntax for PDO - $driver");
+            default:
+                throw new Exception("No AUTO-INCREMENT syntax for PDO - $driver");
         }
 
         return $columnDef;

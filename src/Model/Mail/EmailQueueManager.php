@@ -569,7 +569,7 @@ class EmailQueueManager extends DataAccess
         return $mail;
     }
 
-    public function reportError($subject, $body)
+    /*public function reportError($subject, $body)
     {
         global $_GLOBALS;
         $errorEmail = $_GLOBALS["ON_ERROR_EMAIL"];
@@ -591,5 +591,5 @@ class EmailQueueManager extends DataAccess
             $subject,
             $body);
 
-    }
+    }*/
 }

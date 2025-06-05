@@ -214,9 +214,7 @@ class GTKCookie
                 'expires' => $expiry,
                 'path' => $this->path,
                 'domain' => $domain,
-                'secure' => $secure,
-                'httponly' => $httponly,
-                'samesite' => $samesite
+                
             ]);
 
        

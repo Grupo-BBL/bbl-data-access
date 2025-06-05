@@ -3077,56 +3077,7 @@ abstract class DataAccess /* implements Serializable */
         return $result;
     }
 
-    public function diasDesdeUltimoArchivoPorOrigen($origen) {
-        $sql = "SELECT MAX(fecha_agregado) AS ultima_fecha
-                FROM autorizaciones_para_despachar
-                WHERE origen = :origen";
-        $stmt = $this->getPDO()->prepare($sql);
-        $stmt->execute(['origen' => $origen]);
-        $row = $stmt->fetch();
-    
-        if (!$row || !$row['ultima_fecha']) {
-            return null; // Nunca se ha subido archivo para este origen
-        }
-    
-        $ultimaFecha = new DateTime($row['ultima_fecha']);
-        $ahora = new DateTime();
-        $dias = $ahora->diff($ultimaFecha)->days;
-        return $dias;
-    }
-
-    public function tieneArchivosRecientes($idLinea, $dias = 30) {
-        $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
-        
-        $sql = "SELECT COUNT(*) FROM autorizaciones_para_despachar 
-                WHERE id_linea = ? 
-                AND fecha_agregado >= ?";
-                
-        $stmt = $this->getPDO()->prepare($sql);
-        $stmt->execute([$idLinea, $fechaLimite]);
-        return $stmt->fetchColumn() > 0;
-    }
-    
-    public function contenedorEnManifiestoReciente($idLinea, $numeroContenedor, $dias = 30) {
-        $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
-        
-        $sql = "SELECT * FROM autorizaciones_para_despachar 
-                WHERE id_linea = ? 
-                AND fecha_agregado >= ?
-                AND container_number = ?";
-                
-        $stmt = $this->getPDO()->prepare($sql);
-        $stmt->execute([$idLinea, $fechaLimite, $numeroContenedor]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    
-    public function lineaSubeArchivos($idLinea) {
-        $sql = "SELECT COUNT(*) FROM autorizaciones_para_despachar WHERE id_linea = ?";
-        $stmt = $this->getPDO()->prepare($sql);
-        $stmt->execute([$idLinea]);
-        return $stmt->fetchColumn() > 0;
-    }
-
+   
     // MARK: - INSERT
 
     public function insertSqlWithPHPKeys($item, $debug = false)
@@ -5263,39 +5214,4 @@ abstract class DataAccess /* implements Serializable */
 		<?php return ob_get_clean(); // End output buffering and get the buffered content as a string
 	}
 
-    public function puedeCrearConduce($flcodigo) {
-        $sql = "SELECT autorizacion_despacho, FLNOMBRE
-                FROM flineas
-                WHERE FLCODIGO = :flcodigo";
-        $stmt = $this->getPDO()->prepare($sql);
-        $stmt->execute(['flcodigo' => $flcodigo]);
-        $row = $stmt->fetch();
-    
-        if (!$row) {
-            return [
-                'puede_crear' => false,
-                'mensaje' => 'No se encontró la línea naviera especificada'
-            ];
-        }
-    
-        if (!$row['autorizacion_despacho']) {
-            return [
-                'puede_crear' => false,
-                'mensaje' => "La línea {$row['FLNOMBRE']} no tiene autorización de despacho vigente"
-            ];
-        }
-    
-        return [
-            'puede_crear' => true,
-            'mensaje' => "Línea {$row['FLNOMBRE']} autorizada para crear conduce"
-        ];
-    }
-
-    public function getDistinctOrigenes() {
-        $sql = "SELECT DISTINCT origen FROM autorizaciones_para_despachar WHERE origen IS NOT NULL";
-        $stmt = $this->getPDO()->prepare($sql);
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        return $result;
-    }
 }

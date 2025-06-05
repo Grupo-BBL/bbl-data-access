@@ -642,20 +642,21 @@ class RolePersonRelationshipsDataAccess extends DataAccess
     {
         $tableName = $this->tableName();
 
-        $query = "CREATE TABLE IF NOT EXISTS $tableName  
-                  (id INT AUTO_INCREMENT PRIMARY KEY,
-                   user_id INT,
-                   role_id INT,
-                   qualifier VARCHAR(255) DEFAULT NULL,
-                   is_admin_for_role BOOLEAN DEFAULT NULL,
-                    purpose VARCHAR(255) DEFAULT NULL,
-                    is_active BOOLEAN DEFAULT NULL,
-                   permissionsArray JSON DEFAULT NULL,
-                   can_grant_role BOOLEAN DEFAULT NULL,
-                   owns_role BOOLEAN DEFAULT NULL,
-                  date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  date_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                  UNIQUE(user_id, role_id, qualifier))";
+        $query = "CREATE TABLE IF NOT EXISTS $tableName (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            role_id INTEGER,
+            qualifier TEXT DEFAULT NULL,
+            is_admin_for_role INTEGER DEFAULT NULL,
+            purpose TEXT DEFAULT NULL,
+            is_active INTEGER DEFAULT NULL,
+            permissionsArray TEXT DEFAULT NULL,
+            can_grant_role INTEGER DEFAULT NULL,
+            owns_role INTEGER DEFAULT NULL,
+            date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            date_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, role_id, qualifier)
+        )";
 
         $this->getDB()->query($query);
 
