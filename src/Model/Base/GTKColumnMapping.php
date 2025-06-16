@@ -144,12 +144,17 @@ class GTKColumnMapping extends GTKColumnBase
         $this->linkTo              = $options['linkTo']           ?? null;
         $this->nonPrimaryLookup    = $options['nonPrimaryLookup'] ?? null;
         
+      
+
+        
         if ($this->type && preg_match('/^([a-zA-Z]+)\\(([^)]+)\\)$/', $this->type, $matches)) {
             $this->columnType = strtoupper($matches[1]);
             $this->columnSize = $matches[2]; // Esto será "15,2" para DECIMAL(15,2)
         } elseif ($this->type) {
             $this->columnType = strtoupper($this->type);
         }
+        $this->columnSize =  $this->columnSize ?? $options['columnSize'] ?? null;
+        $this->columnType = $this->columnType ?? $options['columnType'] ?? null;
   
         $this->allowNulls          = $options['allowNulls']       ?? null;   
         $this->defaultValue        = $options['defaultValue']     ?? null; 
@@ -943,7 +948,7 @@ class GTKColumnMapping extends GTKColumnBase
                 break;
         }
 
-        throw new Exception("INVALID COLUMN TYPE for $this->phpKey");
+        throw new Exception("INVALID COLUMN TYPE for " . $this->phpKey . " - " . $this->columnType);
     }
 
     public function autoIncrementSyntaxForDriverName($driver)
