@@ -31,22 +31,6 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
 		$this->dataMapping = new GTKDataSetMapping($this, $columnMappings);
     }
 
-    public function migrate()
-    {
-        $this->getDB()->query("CREATE TABLE IF NOT EXISTS {$this->tableName()} 
-        (role_permission_relationship_id INTEGER PRIMARY KEY,
-         role_id,
-         permission_id, 
-         comments,
-         is_active,
-         date_created,
-         date_modified,
-        UNIQUE(role_permission_relationship_id))");
-
-        // $this->getDB()->query("ALTER TABLE ".$this->tableName()." ADD COLUMN qualifiers;");
-        $this->addColumnIfNotExists("qualifiers");
-
-    }
 
     public function permissionRelationsForRole($role)
     {
@@ -137,6 +121,11 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
                 gtk_log("Permission Relations: ".print_r($permissionRelation, true));
             }
             $permissionIDS[] = $permissionRelation["permission_id"];
+        }
+
+        // Validación para evitar SQL IN () vacío
+        if (empty($permissionIDS)) {
+            return [];
         }
 
         if ($debug)
