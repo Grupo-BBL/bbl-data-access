@@ -526,7 +526,7 @@ abstract class DataAccess /* implements Serializable */
         {
             switch ($driverName)
             {
-                case "mysql":
+                
                 case "sqlsrv":
                 case "pgsql":
                 case "oci":
@@ -537,6 +537,7 @@ abstract class DataAccess /* implements Serializable */
                     gtk_log("Table is not created. Consider: ".$sql);
                     return;
                 case "sqlite":
+                case "mysql":
                 default:
                     $this->createTable();
                     return;
