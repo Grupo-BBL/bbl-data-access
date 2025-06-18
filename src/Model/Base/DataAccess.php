@@ -31,7 +31,7 @@ function generateSelectOptionsDataLabelColumn($rows, $currentValue, $dataSourceN
             //
         }
 
-    }
+    } 
 
     $language = "es";
 
@@ -1873,7 +1873,7 @@ abstract class DataAccess /* implements Serializable */
             {
                 if ($columnMapping->isUnique()) 
                 {
-                    $columnName = $columnMapping->dbColumnName();
+                    $columnName = $this->dataMapping->getColumnKeyForDB($columnMapping->phpKey);
                     // Assuming the table name is available in a variable $tableName
                     $uniqueIndexName = "unique_".$tableName."_".$columnName; // Generate a unique index name
                     $sql = "CREATE UNIQUE INDEX IF NOT EXISTS $uniqueIndexName ON $tableName ($columnName)"; // Append the SQL for creating a unique index
@@ -2465,10 +2465,10 @@ abstract class DataAccess /* implements Serializable */
     }
  
 
-
 	public function findByParameter($parameterName, $parameterValue)
 	{
-        $columnName = $this->dbColumnNameForKey($parameterName);
+        // Usar el nombre correcto de columna según la configuración
+        $columnName = $this->dataMapping->getColumnKeyForDB($parameterName);
 
 		$query = "SELECT * FROM {$this->tableName()} WHERE ".$columnName." = :parameterValue";
 		
@@ -3144,7 +3144,8 @@ abstract class DataAccess /* implements Serializable */
                 $sql.=  ", ";
             }
 
-            $columnName = $columnMapping->getSqlColumnName();
+            // CAMBIO: Usar el nombre correcto de columna
+            $columnName = $this->dataMapping->getColumnKeyForDB($columnMapping->phpKey);
             $sql .= $columnName;
             
             if ($debug)
@@ -5146,7 +5147,7 @@ abstract class DataAccess /* implements Serializable */
 			error_log("Data source: ".get_class($this));
 		}
 	
-		$index = 0;
+		$index = 0; // Initialize $index variable
 	
 		ob_start(); // Start output buffering 
 		?>
@@ -5222,7 +5223,7 @@ abstract class DataAccess /* implements Serializable */
         $converted = [];
         // Suponiendo que $this->dataMapping es un GTKDataSetMapping
         foreach ($this->dataMapping->columns as $columnMapping) {
-            $phpKey = $columnMapping->phpKey;
+            $phpKey = $columnMapping->phpKey ?? $columnMapping->sqlServerKey;
             $dbKey  = $columnMapping->sqlServerKey ?? $phpKey;
             if (isset($row[$dbKey])) {
                 $converted[$phpKey] = $row[$dbKey];
