@@ -301,7 +301,7 @@ class GTKDataSetMapping {
             if (!$first) {
                 $sql .= ", ";
             }
-            $sql .= $columnMapping->sqlServerKey;
+            $sql .= $this->getColumnKeyForDB($columnMapping->phpKey);
             $first = false;
         }
         $sql .= ") VALUES (";
@@ -315,7 +315,7 @@ class GTKDataSetMapping {
             if (!$first) {
                 $sql .= ", ";
             }
-            $sql .= $columnMapping->phpKey;
+            $sql .= ":" . $columnMapping->phpKey;
             $first = false;
         }
         $sql .= ")";
@@ -332,11 +332,11 @@ class GTKDataSetMapping {
             if (!$first) {
                 $sql .= ", ";
             }
-            $sql .= $columnMapping->sqlServerKey . " = " . $columnMapping->phpKey;
+            $sql .= $this->getColumnKeyForDB($columnMapping->phpKey) . " = :" . $columnMapping->phpKey;
             $first = false;
         }
 
-        $sql .= " WHERE " . $this->primaryMapping->sqlServerKey . " = " . $this->primaryMapping->phpKey;
+        $sql .= " WHERE " . $this->getColumnKeyForDB($this->primaryMapping->phpKey) . " = :" . $this->primaryMapping->phpKey;
 
         return $sql;
     }
@@ -411,11 +411,15 @@ class GTKDataSetMapping {
             {
                 $this->nonPrimaryLookup = $columnMapping;
             }
-            $this->sqlServerMapping[$columnMapping->sqlServerKey] = $columnMapping;
+            // Mapea tanto por sqlServerKey como por phpKey
+            if ($columnMapping->sqlServerKey) {
+                $this->sqlServerMapping[$columnMapping->sqlServerKey] = $columnMapping;
+            }
+            $this->sqlServerMapping[$columnMapping->phpKey] = $columnMapping;
         }
 
         array_push($this->ordered, $columnMapping);
-	    $this->phpMapping[$columnMapping->phpKey] = $columnMapping;
+        $this->phpMapping[$columnMapping->phpKey] = $columnMapping;
     }
 
     public function dbColumnsPrefixedWith($prefix)
@@ -476,6 +480,24 @@ class GTKDataSetMapping {
             return $columnMapping->phpKey;
         }
     }
+
+    public function getColumnKeyForDB($phpKey)
+{
+    
+    $className = get_class($this);
+
+    // Obtén la config de la base de datos actual
+    $dbConfig = $_GLOBALS["DataAccessManager_DB_CONFIG"][$this->dbName] ?? [];
+
+    // Si la tabla está en la lista de IGNORAR_DB_KEY..., usa phpKey
+    if (isset($dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"]) &&
+        in_array($className, $dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"])) {
+        return $phpKey;
+    }
+
+    // Si no, usa el sqlServerKey (o el phpKey si no existe)
+    return $this->dataMapping->phpMapping[$phpKey]->sqlServerKey ?? $phpKey;
+}
 
 
 }

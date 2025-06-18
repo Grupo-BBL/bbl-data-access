@@ -1838,8 +1838,11 @@ abstract class DataAccess /* implements Serializable */
             {
                 $sql .= ", ";
             }
-            
-            $sql .= $columnMapping->getCreateSQLForPDO($this->getPDO());      
+            // Usar el nombre correcto de columna según la configuración
+            $colName = $this->dataMapping->getColumnKeyForDB($columnMapping->phpKey);
+            $colType = $columnMapping->type ?? 'VARCHAR(255)';
+            // Aquí puedes agregar más lógica para NOT NULL, PRIMARY KEY, etc. si lo necesitas
+            $sql .= "`$colName` $colType";
         }
 
         $sql .= ");";
@@ -5213,4 +5216,19 @@ abstract class DataAccess /* implements Serializable */
 		</table>
 		<?php return ob_get_clean(); // End output buffering and get the buffered content as a string
 	}
+    
+    public function convertToPHPKeys($row)
+    {
+        $converted = [];
+        // Suponiendo que $this->dataMapping es un GTKDataSetMapping
+        foreach ($this->dataMapping->columns as $columnMapping) {
+            $phpKey = $columnMapping->phpKey;
+            $dbKey  = $columnMapping->sqlServerKey ?? $phpKey;
+            if (isset($row[$dbKey])) {
+                $converted[$phpKey] = $row[$dbKey];
+            }
+        }
+        return $converted;
+    }
+
 }
