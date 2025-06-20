@@ -481,7 +481,7 @@ class GTKDataSetMapping {
     }
 
     public function getColumnKeyForDB($phpKey)
-    {
+{
         global $_GLOBALS;
         
         // Si no hay dbName configurado, usar sqlServerKey por defecto
@@ -491,20 +491,20 @@ class GTKDataSetMapping {
         }
         
         // Obtener la config de la base de datos actual
-        $dbConfig = $_GLOBALS["DataAccessManager_DB_CONFIG"][$this->dbName] ?? [];
-        
-        // Si la tabla está en la lista de IGNORAR_DB_KEY..., usa phpKey
+    $dbConfig = $_GLOBALS["DataAccessManager_DB_CONFIG"][$this->dbName] ?? [];
+
+    // Si la tabla está en la lista de IGNORAR_DB_KEY..., usa phpKey
         if (isset($dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"])) {
             $className = get_class($this->dataAccessor);
             if (in_array($className, $dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"])) {
-                return $phpKey;
+        return $phpKey;
             }
-        }
-        
-        // Si no, usa el sqlServerKey (o el phpKey si no existe)
+    }
+
+    // Si no, usa el sqlServerKey (o el phpKey si no existe)
         $columnMapping = $this->phpMapping[$phpKey] ?? null;
         return $columnMapping ? $columnMapping->sqlServerKey : $phpKey;
-    }
+}
 
     public function setDbName($dbName)
     {

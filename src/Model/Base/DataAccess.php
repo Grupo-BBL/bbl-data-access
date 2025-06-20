@@ -5225,13 +5225,12 @@ abstract class DataAccess /* implements Serializable */
         // Iterar sobre todas las columnas mapeadas
         foreach ($this->dataMapping->ordered as $columnMapping) {
             $phpKey = $columnMapping->phpKey;
-            $sqlServerKey = $columnMapping->sqlServerKey;
+            $dbKey = $columnMapping->sqlServerKey; 
             
-            // Si el row tiene el sqlServerKey, convertirlo a phpKey
-            if (isset($row[$sqlServerKey])) {
-                $converted[$phpKey] = $row[$sqlServerKey];
+            if ($dbKey && isset($row[$dbKey])) {
+                $converted[$phpKey] = $row[$dbKey];
             }
-            // Si el row ya tiene el phpKey, mantenerlo
+            // Si el row ya tiene el phpKey (y no el dbKey), mantenerlo
             else if (isset($row[$phpKey])) {
                 $converted[$phpKey] = $row[$phpKey];
             }

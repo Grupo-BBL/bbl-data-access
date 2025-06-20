@@ -1187,7 +1187,15 @@ class DataAccessManager
         return new DataAccessManager($databaseConfigurations, $dataAccessorConfigurations);
     }
 
-    public function migrateDataTo($targetDataAccessManager, $dataAccessorName, $options = [])
+	public function migrateRecordTo($targetDataAccessManager, $dataAccessorName, $record, $options = [])
+	{
+		$sourceAccessor = $this->getDataAccessor($dataAccessorName);
+		$targetAccessor = $targetDataAccessManager->getDataAccessor($dataAccessorName);
+		
+		
+	}
+
+    public function migrateAllAccessorsDataTo($targetDataAccessManager, $dataAccessorName, $options = [])
     {
         $sourceAccessor = $this->getDataAccessor($dataAccessorName);
         $targetAccessor = $targetDataAccessManager->getDataAccessor($dataAccessorName);

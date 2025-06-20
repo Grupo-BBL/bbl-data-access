@@ -179,6 +179,11 @@ class GTKColumnMapping extends GTKColumnBase
     
     public function getSqlColumnName()
     {
+        // Check the flag on the data source
+        if (isset($this->dataSource->ignoreDbKeyForWriting) && $this->dataSource->ignoreDbKeyForWriting) {
+            return $this->phpKey;
+        }
+
         $sqlKey = null;
 
         if ($this->sqlServerKey)
