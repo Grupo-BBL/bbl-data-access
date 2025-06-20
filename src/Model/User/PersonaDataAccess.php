@@ -286,9 +286,11 @@ class PersonaDataAccess extends DataAccess
 			new GTKColumnMapping($this, "id", [
 				"isPrimaryKey"    => true,
 				"isAutoIncrement" => true,
+				"type"            => "int",
 			]),
 			new GTKColumnMapping($this, "created_by_user_id", [
 				"hideOnForms" => true,
+				"type"        => "int",
 				"valueWhenNewForUser" => function ($user, $item){
 					return $user["id"];
 				},
@@ -297,28 +299,40 @@ class PersonaDataAccess extends DataAccess
 				"isUnique"     => true, 
 				'isInvalid'    => $checkCedulaForProblems, 
 				"processOnAll"  => function ($rawEmail) { return strtolower($rawEmail); },
+				"type"          => "varchar(11)",
 			]),
-			new GTKColumnMapping($this, "nombres"),
-			new GTKColumnMapping($this, "apellidos"),
+			new GTKColumnMapping($this, "nombres", [
+				"type" => "varchar(255)",
+			]),
+			new GTKColumnMapping($this, "apellidos", [
+				"type" => "varchar(255)",
+			]),
 			new GTKColumnMapping($this, "email", [
 				"isRequired"    => true,
                 "isUnique"      => true,
 				"processOnAll"  => function ($rawEmail) { return strtolower($rawEmail); },
+				"type"          => "varchar(255)",
 			]),
 			$passwordVirtualColumn,
 			new GTKColumnMapping($this, "password_hash", [
 				'hideOnShow'  => true,
                 'hideOnForms' => true, 
-                'hideOnLists' => true
+                'hideOnLists' => true,
+                "type"        => "varchar(255)",
             ]),
-			new GTKColumnMapping($this, "fecha_creado"),
-			new GTKColumnMapping($this, "fecha_modificado"),
+			new GTKColumnMapping($this, "fecha_creado", [
+				"type" => "datetime",
+			]),
+			new GTKColumnMapping($this, "fecha_modificado", [
+				"type" => "datetime",
+			]),
 			new GTKColumnMapping($this, "estado", [
 				'formInputType' => 'select', 
 				'possibleValues' => [ 
 					'activo' 	 => ['label'=>'Activo'], 
 					'inactivo' 	 => ['label'=>'Inactivo'],
 				],
+				"type" => "varchar(20)",
 			]),
 		];
 

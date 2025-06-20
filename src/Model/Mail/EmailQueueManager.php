@@ -82,32 +82,71 @@ class EmailQueueManager extends DataAccess
 
     
 
-        $columns = [
-            new GTKColumnMapping($this, "email_id", [
-                "columnType"       => "INTEGER",
-                "isPrimaryKey"     => true,
-                 "isAutoIncrement" => true,
-                "dbKey"            => "EmailID",           
-                "formLabel"        => "ID de Correo Electrónico",
-            ]),         
-            new GTKColumnMapping($this, "sender_email",      [ "dbKey" => "SenderEmail",        "formLabel" => "Correo Electrónico del Remitente"]),
-            new GTKColumnMapping($this, "subject",           [ "dbKey" => "Subject",            "formLabel" => "Asunto"]),
-            new GTKColumnMapping($this, "message_text",      [ "dbKey" => "MessageText",        "formLabel" => "Texto del Mensaje"]),
-            new GTKColumnMapping($this, "status",            [ "dbKey" => "Status",             "formLabel" => "Estado"]),
-            new GTKColumnMapping($this, "created_at",        [ "dbKey" => "CreatedAt",          "formLabel" => "Fecha de Creación"]),
-            new GTKColumnMapping($this, "sent_at",           [ "dbKey" => "SentAt",             "formLabel" => "Fecha de Envío"]),
-            new GTKColumnMapping($this, "send_at",           [ "dbKey" => "SendAt",             "formLabel" => "Fecha de Programación de Envío"]),
-            new GTKColumnMapping($this, "error_description", [ "dbKey" => "ErrorDescription",   "formLabel" => "Descripción del Error"]),
-            new GTKColumnMapping($this, "recipient_email",   [ "dbKey" => "RecipientEmail",     "formLabel" => "Correo Electrónico del Destinatario"]),
-            new GTKColumnMapping($this, "cc_recipients",     [ "dbKey" => "CCRecipients",       "formLabel" => "Destinatarios en Copia"]),
-            new GTKColumnMapping($this, "bcc_recipients",    [ "dbKey" => "BCCRecipients",      "formLabel" => "Destinatarios en Copia Oculta"]),
-            new GTKColumnMapping($this, "is_html"),
-            new GTKColumnMapping($this, "string_to_attach_filename"),
-            new GTKColumnMapping($this, "string_to_attach"),
-             
+        $columnMappings = [
+            new GTKColumnMapping($this, "id", [
+                "isPrimaryKey"    => true, 
+                "isAutoIncrement" => true, 
+                "hideOnForms"     => true,
+                "type"            => "int",
+            ]),
+            new GTKColumnMapping($this, "sender_email", [
+                "dbKey" => "SenderEmail",        
+                "formLabel" => "Correo Electrónico del Remitente",
+                "type" => "varchar(255)",
+            ]),
+            new GTKColumnMapping($this, "subject", [
+                "dbKey" => "Subject",            
+                "formLabel" => "Asunto",
+                "type" => "varchar(255)",
+            ]),
+            new GTKColumnMapping($this, "message_text", [
+                "dbKey" => "MessageText",        
+                "formLabel" => "Texto del Mensaje",
+                "type" => "text",
+            ]),
+            new GTKColumnMapping($this, "status", [
+                "dbKey" => "Status",             
+                "formLabel" => "Estado",
+                "type" => "varchar(50)",
+            ]),
+            new GTKColumnMapping($this, "created_at", [
+                "dbKey" => "CreatedAt",          
+                "formLabel" => "Fecha de Creación",
+                "type" => "datetime",
+            ]),
+            new GTKColumnMapping($this, "sent_at", [
+                "dbKey" => "SentAt",             
+                "formLabel" => "Fecha de Envío",
+                "type" => "datetime",
+            ]),
+            new GTKColumnMapping($this, "send_at", [
+                "dbKey" => "SendAt",             
+                "formLabel" => "Fecha de Programación de Envío",
+                "type" => "datetime",
+            ]),
+            new GTKColumnMapping($this, "error_description", [
+                "dbKey" => "ErrorDescription",   
+                "formLabel" => "Descripción del Error",
+                "type" => "text",
+            ]),
+            new GTKColumnMapping($this, "recipient_email", [
+                "dbKey" => "RecipientEmail",     
+                "formLabel" => "Correo Electrónico del Destinatario",
+                "type" => "varchar(255)",
+            ]),
+            new GTKColumnMapping($this, "cc_recipients", [
+                "dbKey" => "CCRecipients",       
+                "formLabel" => "Destinatarios en Copia",
+                "type" => "text",
+            ]),
+            new GTKColumnMapping($this, "bcc_recipients", [
+                "dbKey" => "BCCRecipients",      
+                "formLabel" => "Destinatarios en Copia Oculta",
+                "type" => "text",
+            ]),
         ];
 
-		$this->dataMapping 			= new GTKDataSetMapping($this, $columns);
+		$this->dataMapping 			= new GTKDataSetMapping($this, $columnMappings);
 		$this->defaultOrderByColumnKey = "CreatedAt";
 		$this->defaultOrderByOrder  = "DESC";
 		$this->singleItemName	    = "Email";

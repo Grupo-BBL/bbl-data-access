@@ -1,4 +1,4 @@
- <?php
+<?php
 
 enum PermissionType: int {
     case None    = 0;
@@ -17,23 +17,29 @@ class PermissionDataAccess extends DataAccess
                 "isPrimaryKey"    => true, 
                 "isAutoIncrement" => true, 
                 "hideOnForms"     => true, 
+                "type"            => "int",
             ]), 
 			new GTKColumnMapping($this, "name", [
                 "formLabel"  => "Nombre",
                 "isUnique"   => true,
                 "isNullable" => false,
+                "type"       => "varchar(255)",
             ]),
 			new GTKColumnMapping($this, "comments", [
                 "formLabel" => "Comentarios",
+                "type"     => "text",
             ]),
 			new GTKColumnMapping($this, "is_active", [
-                "formLabel" => "¿Esta Activo?"
+                "formLabel" => "¿Esta Activo?",
+                "type"     => "tinyint(1)",
             ]),
 			new GTKColumnMapping($this, "date_created", [
-                "formLabel" => "Fecha Creacion"
+                "formLabel" => "Fecha Creacion",
+                "type"     => "datetime",
             ]),
 			new GTKColumnMapping($this, "date_modified", [
-                "formLabel" => "Fecha Modificado"
+                "formLabel" => "Fecha Modificado",
+                "type"     => "datetime",
             ]),
 		];
         

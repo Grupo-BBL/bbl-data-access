@@ -38,20 +38,25 @@ class RoleDataAccess extends DataAccess
     {
         $columnMappings = [
 			new GTKColumnMapping($this, "id",	[
-                "isPrimaryKey"    => true, 
-                "isAutoIncrement" => true, 
+                "isPrimaryKey"    => true,
+                "type"            => "int",
+                "isAutoIncrement" => true,
                 "hideOnForms"     => true, 
             ]), 
 			new GTKColumnMapping($this, "name", [
                 "isUnique" => true,
+                "type"     => "varchar(255)",
             ]),
-			new GTKColumnMapping($this, "purpose"),
+			new GTKColumnMapping($this, "purpose", [
+                "type" => "text",
+            ]),
 			new GTKColumnMapping($this, "is_active", [
                 'formInputType' => 'select', 
 				'possibleValues' => [ 
 					true  => ['label'=>'TRUE'],
 					false => ['label'=>'FALSE'],
 				],
+                "type" => "tinyint(1)",
             ]),
             new GTKColumnMapping($this, "needs_qualifier", [
                 'formInputType' => 'select', 
@@ -59,22 +64,35 @@ class RoleDataAccess extends DataAccess
 					true  => ['label'=>'TRUE'],
 					false => ['label'=>'FALSE'],
 				],
+                "type" => "tinyint(1)",
             ]),
             new GTKColumnMapping($this, "qualifier_data_source", [
                 "customInputFunctionClass"  => null,
                 "customInputFunctionScope"  => "object", //--- instance?? ---
                 "customInputFunctionObject" => DataAccessManager::get('DataAccessManager'),
                 "customInputFunction"       => "generateSelectForUserColumnValueName",
+                "type" => "varchar(255)",
             ]),
-            new GTKColumnMapping($this, "qualifier_data_source_column"),
-            new GTKColumnMapping($this, "qualifier_data_label_column"),
+            new GTKColumnMapping($this, "qualifier_data_source_column", [
+                "type" => "varchar(255)",
+            ]),
+            new GTKColumnMapping($this, "qualifier_data_label_column", [
+                "type" => "varchar(255)",
+            ]),
             new GTKColumnMapping($this, "permissionsArray", [
                 "hideOnForms" => true, 
                 "hideOnLists" => true,
+                "type" => "text",
             ]),
-            new GTKColumnMapping($this, "is_root_role"),
-			new GTKColumnMapping($this, "date_created"),
-			new GTKColumnMapping($this, "date_modified"),
+            new GTKColumnMapping($this, "is_root_role", [
+                "type" => "tinyint(1)",
+            ]),
+			new GTKColumnMapping($this, "date_created", [
+                "type" => "datetime",
+            ]),
+			new GTKColumnMapping($this, "date_modified", [
+                "type" => "datetime",
+            ]),
 		];
 		$this->dataMapping 			= new GTKDataSetMapping($this, $columnMappings);
 		$this->defaultOrderByColumnKey = "name";
