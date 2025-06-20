@@ -9,6 +9,7 @@ class GTKDataSetMapping {
     public $nonPrimaryLookup  = null;
     private $dataAccessor;
     public $tableName;
+    public $dbName;
 
 
     public function getTableName()
@@ -480,22 +481,34 @@ class GTKDataSetMapping {
     }
 
     public function getColumnKeyForDB($phpKey)
-{
-    
-    $className = get_class($this);
-
-    // Obtén la config de la base de datos actual
-    $dbConfig = $_GLOBALS["DataAccessManager_DB_CONFIG"][$this->dbName] ?? [];
-
-    // Si la tabla está en la lista de IGNORAR_DB_KEY..., usa phpKey
-    if (isset($dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"]) &&
-        in_array($className, $dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"])) {
-        return $phpKey;
+    {
+        global $_GLOBALS;
+        
+        // Si no hay dbName configurado, usar sqlServerKey por defecto
+        if (!$this->dbName) {
+            $columnMapping = $this->phpMapping[$phpKey] ?? null;
+            return $columnMapping ? $columnMapping->sqlServerKey : $phpKey;
+        }
+        
+        // Obtener la config de la base de datos actual
+        $dbConfig = $_GLOBALS["DataAccessManager_DB_CONFIG"][$this->dbName] ?? [];
+        
+        // Si la tabla está en la lista de IGNORAR_DB_KEY..., usa phpKey
+        if (isset($dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"])) {
+            $className = get_class($this->dataAccessor);
+            if (in_array($className, $dbConfig["IGNORAR_DB_KEY_PARA_LOOKUP_Y_ESCRITURA"])) {
+                return $phpKey;
+            }
+        }
+        
+        // Si no, usa el sqlServerKey (o el phpKey si no existe)
+        $columnMapping = $this->phpMapping[$phpKey] ?? null;
+        return $columnMapping ? $columnMapping->sqlServerKey : $phpKey;
     }
 
-    // Si no, usa el sqlServerKey (o el phpKey si no existe)
-    return $this->dataMapping->phpMapping[$phpKey]->sqlServerKey ?? $phpKey;
-}
-
+    public function setDbName($dbName)
+    {
+        $this->dbName = $dbName;
+    }
 
 }

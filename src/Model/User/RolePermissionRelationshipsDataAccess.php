@@ -12,20 +12,29 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
                 "isPrimaryKey" => true, 
                 "isAutoIncrement" => true, 
                 "hideOnForms" => true,
+                "type" => "int",
             ]), 
             new GTKColumnMapping($this, "permission_id", [
-                "columnType" => "INTEGER",
+                "type" => "int",
             ]),
             new GTKColumnMapping($this, "role_id", [
-                "columnType" => "INTEGER",
+                "type" => "int",
             ]),
-            new GTKColumnMapping($this, "qualifiers"),
-			new GTKColumnMapping($this, "comments"),
+            new GTKColumnMapping($this, "qualifiers", [
+                "type" => "text",
+            ]),
+			new GTKColumnMapping($this, "comments", [
+                "type" => "text",
+            ]),
 			new GTKColumnMapping($this, "is_active", [
-                "columnType" => "BOOLEAN",
+                "type" => "tinyint(1)",
             ]),
-			new GTKColumnMapping($this, "date_created"),
-			new GTKColumnMapping($this, "date_modified"),
+			new GTKColumnMapping($this, "date_created", [
+                "type" => "datetime",
+            ]),
+			new GTKColumnMapping($this, "date_modified", [
+                "type" => "datetime",
+            ]),
 		];
 
 		$this->dataMapping = new GTKDataSetMapping($this, $columnMappings);

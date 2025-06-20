@@ -180,15 +180,24 @@ class SolicitudUsuarioDataAccess extends DataAccess
 			new GTKColumnMapping($this, "id", [
 				"isPrimaryKey" => true,
 				"isAutoIncrement" => true,
-				"type" => "INTEGER",
+				"type" => "int",
 			]),
-			new GTKColumnMapping($this, "empresa_o_transporte"),
+			new GTKColumnMapping($this, "empresa_o_transporte", [
+				"type" => "varchar(255)",
+			]),
 			new GTKColumnMapping($this, "cedula", [ 
-				"isUnique" 	   => true
+				"isUnique" 	   => true,
+				"type"         => "varchar(11)",
 			]),
-			new GTKColumnMapping($this, "nombres"),			
-            new GTKColumnMapping($this, "apellidos"),		
-			new GTKColumnMapping($this, "email"),			
+			new GTKColumnMapping($this, "nombres", [
+				"type" => "varchar(255)",
+			]),			
+            new GTKColumnMapping($this, "apellidos", [
+				"type" => "varchar(255)",
+			]),		
+			new GTKColumnMapping($this, "email", [
+				"type" => "varchar(255)",
+			]),			
             // new GTKColumnMapping($this, "whatsapp"),		
 			// new GTKColumnMapping($this, "fecha_solicitud"),
 			// new GTKColumnMapping($this, "fecha_aprobado"),

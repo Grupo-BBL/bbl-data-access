@@ -1838,11 +1838,11 @@ abstract class DataAccess /* implements Serializable */
             {
                 $sql .= ", ";
             }
-            // Usar el nombre correcto de columna según la configuración
-            $colName = $this->dataMapping->getColumnKeyForDB($columnMapping->phpKey);
-            $colType = $columnMapping->type ?? 'VARCHAR(255)';
-            // Aquí puedes agregar más lógica para NOT NULL, PRIMARY KEY, etc. si lo necesitas
-            $sql .= "`$colName` $colType";
+            
+            // Usar getCreateSQLForDriverName para obtener el SQL completo de la columna
+            $driverName = $this->getPDO()->getAttribute(PDO::ATTR_DRIVER_NAME);
+            $columnSQL = $columnMapping->getCreateSQLForDriverName($driverName);
+            $sql .= $columnSQL;
         }
 
         $sql .= ");";
@@ -5221,15 +5221,43 @@ abstract class DataAccess /* implements Serializable */
     public function convertToPHPKeys($row)
     {
         $converted = [];
-        // Suponiendo que $this->dataMapping es un GTKDataSetMapping
-        foreach ($this->dataMapping->columns as $columnMapping) {
-            $phpKey = $columnMapping->phpKey ?? $columnMapping->sqlServerKey;
-            $dbKey  = $columnMapping->sqlServerKey ?? $phpKey;
-            if (isset($row[$dbKey])) {
-                $converted[$phpKey] = $row[$dbKey];
+        
+        // Iterar sobre todas las columnas mapeadas
+        foreach ($this->dataMapping->ordered as $columnMapping) {
+            $phpKey = $columnMapping->phpKey;
+            $sqlServerKey = $columnMapping->sqlServerKey;
+            
+            // Si el row tiene el sqlServerKey, convertirlo a phpKey
+            if (isset($row[$sqlServerKey])) {
+                $converted[$phpKey] = $row[$sqlServerKey];
+            }
+            // Si el row ya tiene el phpKey, mantenerlo
+            else if (isset($row[$phpKey])) {
+                $converted[$phpKey] = $row[$phpKey];
             }
         }
+        
         return $converted;
+    }
+
+    public function getAllRecords($options = [])
+    {
+        $sql = "SELECT * FROM " . $this->tableName();
+        
+        // Agregar ORDER BY si se especifica
+        if (isset($options['orderBy'])) {
+            $sql .= " ORDER BY " . $options['orderBy'];
+        }
+        
+        // Agregar LIMIT si se especifica
+        if (isset($options['limit'])) {
+            $sql .= " LIMIT " . (int)$options['limit'];
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
 }

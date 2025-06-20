@@ -1172,4 +1172,77 @@ class DataAccessManager
 		}
 	
 	}
+
+    public static function createInstance($databaseConfigurations, $dataAccessorConfigurations = null)
+    {
+        if (!$dataAccessorConfigurations) {
+            global $_GLOBALS;
+            $dataAccessorConfigurations = $_GLOBALS["DataAccessManager_dataAccessorConstructions"];
+        }
+        
+        if (!$dataAccessorConfigurations) {
+            throw new Exception("Data accessor configurations not found");
+        }
+        
+        return new DataAccessManager($databaseConfigurations, $dataAccessorConfigurations);
+    }
+
+    public function migrateDataTo($targetDataAccessManager, $dataAccessorName, $options = [])
+    {
+        $sourceAccessor = $this->getDataAccessor($dataAccessorName);
+        $targetAccessor = $targetDataAccessManager->getDataAccessor($dataAccessorName);
+        
+        // Obtener todos los registros de la fuente
+        $sourceRecords = $sourceAccessor->getAllRecords($options);
+        
+        $migratedCount = 0;
+        $errors = [];
+        
+        foreach ($sourceRecords as $sourceRecord) {
+            try {
+                // Convertir de sqlServerKey a phpKey
+                $convertedRecord = $sourceAccessor->convertToPHPKeys($sourceRecord);
+                
+                // Insertar en el destino
+                $targetAccessor->insert($convertedRecord);
+                $migratedCount++;
+                
+            } catch (Exception $e) {
+                $errors[] = [
+                    'record' => $sourceRecord,
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+        
+        return [
+            'migrated_count' => $migratedCount,
+            'total_records' => count($sourceRecords),
+            'errors' => $errors
+        ];
+    }
+
+    public function migrateAllDataTo($targetDataAccessManager, $dataAccessorNames = null, $options = [])
+    {
+        if (!$dataAccessorNames) {
+            $dataAccessorNames = array_keys($this->dataAccessorConstructions);
+        }
+        
+        $results = [];
+        
+        foreach ($dataAccessorNames as $dataAccessorName) {
+            try {
+                $result = $this->migrateDataTo($targetDataAccessManager, $dataAccessorName, $options);
+                $results[$dataAccessorName] = $result;
+            } catch (Exception $e) {
+                $results[$dataAccessorName] = [
+                    'migrated_count' => 0,
+                    'total_records' => 0,
+                    'errors' => [['error' => $e->getMessage()]]
+                ];
+            }
+        }
+        
+        return $results;
+    }
 }

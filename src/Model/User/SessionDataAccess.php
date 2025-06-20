@@ -382,18 +382,31 @@ class SessionDataAccess extends DataAccess
 	public function register()
 	{	
 		$columnMappings = [
-			new GTKColumnMapping($this, "id",		 	    [ 
-				"formLabel"    => "ID", 
-				"isPrimaryKey" =>true, 
-				"isUnique"     => true,
-				"isAutoIncrement" => true,
-				"type"         => "INTEGER",
+			new GTKColumnMapping($this, "id", [
+				"isPrimaryKey"    => true, 
+				"isAutoIncrement" => true, 
+				"hideOnForms"     => true,
+				"type"            => "int",
 			]),
-			new GTKColumnMapping($this, "session_guid"),
-			new GTKColumnMapping($this, "user_id",			[ "formLabel" => "User ID"]),
-			new GTKColumnMapping($this, "created_at",	    [ "formLabel" => "Created At"]),
-			new GTKColumnMapping($this, "valid_until",   	[ "formLabel" => "Valid Until"]),
-			new GTKColumnMapping($this, "canceled",		[ "formLabel" => "Canceled"]),
+			new GTKColumnMapping($this, "session_guid", [
+				"type" => "varchar(255)",
+			]),
+			new GTKColumnMapping($this, "user_id", [
+				"formLabel" => "User ID",
+				"type"     => "int",
+			]),
+			new GTKColumnMapping($this, "created_at", [
+				"formLabel" => "Created At",
+				"type"     => "datetime",
+			]),
+			new GTKColumnMapping($this, "valid_until", [
+				"formLabel" => "Valid Until",
+				"type"     => "datetime",
+			]),
+			new GTKColumnMapping($this, "canceled", [
+				"formLabel" => "Canceled",
+				"type"     => "tinyint(1)",
+			]),
 		];
 
 		$this->dataMapping = new GTKDataSetMapping($this, $columnMappings);

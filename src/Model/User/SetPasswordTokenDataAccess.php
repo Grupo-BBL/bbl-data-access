@@ -15,19 +15,33 @@ class SetPasswordTokenDataAccess extends DataAccess
             new GTKColumnMapping($this, "id", [
                 "isPrimaryKey" => true,
                 "isAutoIncrement" => true,
+                "type" => "int",
 			]),
-			new GTKColumnMapping($this, "user_id"),
-			new GTKColumnMapping($this, "origin"),
+			new GTKColumnMapping($this, "user_id", [
+                "type" => "int",
+            ]),
+			new GTKColumnMapping($this, "origin", [
+                "type" => "varchar(255)",
+            ]),
             new GTKColumnMapping($this, "token", [
                 "isUnique" => true,
+                "type" => "varchar(255)",
             ]),
-            new GTKColumnMapping($this, "token_type"),
+            new GTKColumnMapping($this, "token_type", [
+                "type" => "varchar(50)",
+            ]),
             // account_activation
             // user_forgot_password
             // admin_reset_password
-			new GTKColumnMapping($this, "fecha_creado"),
-			new GTKColumnMapping($this, "lifetime"),
-            new GTKColumnMapping($this, "invalidated_at"),
+			new GTKColumnMapping($this, "fecha_creado", [
+                "type" => "datetime",
+            ]),
+			new GTKColumnMapping($this, "lifetime", [
+                "type" => "int",
+            ]),
+            new GTKColumnMapping($this, "invalidated_at", [
+                "type" => "datetime",
+            ]),
         ];
 
 		$this->dataMapping		    = new GTKDataSetMapping($this, $columnMappings);
