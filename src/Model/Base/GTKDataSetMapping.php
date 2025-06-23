@@ -412,9 +412,11 @@ class GTKDataSetMapping {
             {
                 $this->nonPrimaryLookup = $columnMapping;
             }
-            $columnMapping->sqlServerKey = $columnMapping->phpKey;
-            $this->sqlServerMapping[$columnMapping->phpKey] = $columnMapping;
-            //$this->sqlServerMapping[$columnMapping->sqlServerKey] = $columnMapping;
+         
+           
+             $this->sqlServerMapping[$columnMapping->sqlServerKey] = $columnMapping;
+            
+          
         }
 
         array_push($this->ordered, $columnMapping);
