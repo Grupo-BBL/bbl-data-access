@@ -23,18 +23,5 @@ class PermissionPersonRelationshipDataAccess extends DataAccess
 		$this->defaultOrderByOrder  = "DESC";
     }
 
-    public function migrate()
-    {
-        $this->getDB()->query("CREATE TABLE IF NOT EXISTS {$this->tableName()} 
-        (persona_permission_id INTEGER PRIMARY KEY,
-         persona_id,
-         permission_id, 
-         comments,
-         is_active,
-         date_created,
-         date_modified,
-        UNIQUE(persona_permission_id))");
-    }
-
 
 }

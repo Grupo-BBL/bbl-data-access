@@ -7,14 +7,32 @@ class DataAccessAuditTrail extends DataAccess
     public function register()
     {
         $columnMappings = [
-            'id',
-            'data_access_name',
-            'record_id',
-            'action_type',
-            'user_id',
-            'user_email',
-            'changes',
-            'created_at',
+            new GTKColumnMapping($this, 'id', [
+                'isPrimaryKey' => true,
+                'isAutoIncrement' => true,
+                'type' => 'int',
+            ]),
+            new GTKColumnMapping($this, 'data_access_name', [
+                'type' => 'varchar(255)',
+            ]),
+            new GTKColumnMapping($this, 'record_id', [
+                'type' => 'varchar(255)',
+            ]),
+            new GTKColumnMapping($this, 'action_type', [
+                'type' => 'varchar(50)',
+            ]),
+            new GTKColumnMapping($this, 'user_id', [
+                'type' => 'int',
+            ]),
+            new GTKColumnMapping($this, 'user_email', [
+                'type' => 'varchar(255)',
+            ]),
+            new GTKColumnMapping($this, 'changes', [
+                'type' => 'text',
+            ]),
+            new GTKColumnMapping($this, 'created_at', [
+                'type' => 'datetime',
+            ]),
         ];
 
         $this->dataMapping = new GTKDataSetMapping($this, $columnMappings);

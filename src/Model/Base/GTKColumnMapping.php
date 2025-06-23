@@ -144,8 +144,18 @@ class GTKColumnMapping extends GTKColumnBase
         $this->linkTo              = $options['linkTo']           ?? null;
         $this->nonPrimaryLookup    = $options['nonPrimaryLookup'] ?? null;
         
-        $this->columnType          = $options['columnType']       ?? null;   
-        $this->columnSize          = $options['columnSize']       ?? null;   
+      
+
+        
+        if ($this->type && preg_match('/^([a-zA-Z]+)\\(([^)]+)\\)$/', $this->type, $matches)) {
+            $this->columnType = strtoupper($matches[1]);
+            $this->columnSize = $matches[2]; // Esto será "15,2" para DECIMAL(15,2)
+        } elseif ($this->type) {
+            $this->columnType = strtoupper($this->type);
+        }
+        $this->columnSize =  $this->columnSize ?? $options['columnSize'] ?? null;
+        $this->columnType = $this->columnType ?? $options['columnType'] ?? null;
+  
         $this->allowNulls          = $options['allowNulls']       ?? null;   
         $this->defaultValue        = $options['defaultValue']     ?? null; 
         $this->isAutoIncrement     = $options['isAutoIncrement']  ?? null; 
@@ -169,6 +179,11 @@ class GTKColumnMapping extends GTKColumnBase
     
     public function getSqlColumnName()
     {
+        // Check the flag on the data source
+        if (isset($this->dataSource->ignoreDbKeyForWriting) && $this->dataSource->ignoreDbKeyForWriting) {
+            return $this->phpKey;
+        }
+
         $sqlKey = null;
 
         if ($this->sqlServerKey)
@@ -938,7 +953,7 @@ class GTKColumnMapping extends GTKColumnBase
                 break;
         }
 
-        throw new Exception("INVALID COLUMN TYPE for $this->phpKey");
+        throw new Exception("INVALID COLUMN TYPE for " . $this->phpKey . " - " . $this->columnType);
     }
 
     public function autoIncrementSyntaxForDriverName($driver)
@@ -952,14 +967,16 @@ class GTKColumnMapping extends GTKColumnBase
 
         switch ($driver)
         {
-            case 'mysql':
-                $columnDef .= "AUTO_INCREMENT ";
-                break;
             case 'pgsql':
                 throw new Exception("MUST ADAPT TO `SERIAL` TYPE FOR PostgresSQL");
                 break;
             case 'sqlsrv':
                 $columnDef .= "IDENTITY(1,1) ";
+                break;
+            case 'mysql':
+                if ($this->isPrimaryKey()) {
+                    $columnDef .= "AUTO_INCREMENT ";
+                }
                 break;
             case 'sqlite':
                 // En SQLite, AUTOINCREMENT solo puede usarse con INTEGER PRIMARY KEY

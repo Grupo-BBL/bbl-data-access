@@ -12,14 +12,17 @@ class RolePersonRelationshipsDataAccess extends DataAccess
                 "isPrimaryKey"    => true, 
                 "isAutoIncrement" => true, 
                 "hideOnForms"     => true, 
+                "type"            => "int",
             ]), 
             new GTKColumnMapping($this, "user_id", [
+                "type" => "int",
                 "transformValueOnLists" => function ($item, $value) {
                     $persona = DataAccessManager::get("persona")->getByIdentifier($value);
                     return $value." - ".DataAccessManager::get("persona")->getFullName($persona);
                 },
             ]),
 			new GTKColumnMapping($this, "role_id", [
+                "type" => "int",
                 "customInputFunctionClass"  => null,
                 "customInputFunctionScope"  => "object", //--- instance?? ---
                 "customInputFunctionObject" => DataAccessManager::get('roles'),
@@ -37,6 +40,7 @@ class RolePersonRelationshipsDataAccess extends DataAccess
             ]),
             // new GTKColumnMapping($this, "qualifier_type"),
             new GTKColumnMapping($this, "qualifier", [
+                "type" => "varchar(255)",
                 "customInputFunction" => function($columnMapping, $user, $item, $value, $options) {
                     $debug = false;
 
