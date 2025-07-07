@@ -28,13 +28,14 @@ class CreateUserHTMLPage extends GTKHTMLPage
                 'nombres' => $row[1],
                 'apellidos' => $row[2],
                 'email' => $row[3],
-                'password' => $row[4]
+                'password' => $row[4],
+                'codigo_transportista' => isset($row[6]) ? $row[6] : null
             ];
             
             // Manejar roles - si no hay roles o está vacío, usar array vacío
             $roleIds = [];
             if (!empty($row[5])) {
-                $roleIds = explode(',', $row[5]);
+            $roleIds = explode(',', $row[5]);
                 // Limpiar espacios en blanco
                 $roleIds = array_map('trim', $roleIds);
                 // Filtrar valores vacíos
@@ -59,7 +60,8 @@ class CreateUserHTMLPage extends GTKHTMLPage
             'nombres' => $user['nombres'],
             'apellidos' => $user['apellidos'],
             'email' => $user['email'],
-            'password' => $user['password']
+            'password' => $user['password'],
+            'codigo_transportista' => isset($user['codigo_transportista']) ? $user['codigo_transportista'] : null
         ];
         $roleIds = $user['role_ids'] ?? [];
 
@@ -68,7 +70,7 @@ class CreateUserHTMLPage extends GTKHTMLPage
 
       
         $this->messages[] = json_encode($result);
-      }
+    }
     }
 
     public function renderMessages()
@@ -104,6 +106,10 @@ class CreateUserHTMLPage extends GTKHTMLPage
     {
         $rolesDataAccess = DataAccessManager::get('roles');
         $roles = $rolesDataAccess->selectAll();
+        
+        // Obtener lista de transportistas para el select
+        $transportistaDataAccess = DataAccessManager::get('transportista');
+        $transportistas = $transportistaDataAccess->selectAll();
 
         ob_start(); ?>
 
@@ -253,6 +259,47 @@ class CreateUserHTMLPage extends GTKHTMLPage
             .role-item:hover {
                 background-color: #f8f9fa;
             }
+            .form-text {
+                font-size: 0.875rem;
+                color: #6c757d;
+                margin-top: 0.25rem;
+            }
+            .text-muted {
+                color: #6c757d !important;
+            }
+            
+            /* Estilos para Select2 */
+            .select2-container {
+                width: 100% !important;
+            }
+            .select2-container .select2-selection--single {
+                height: 36px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                line-height: 36px;
+                padding-right: 20px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 34px;
+                width: 30px;
+            }
+            .select2-container--default .select2-results__option--highlighted[aria-selected] {
+                background-color: #007bff;
+            }
+            .select2-search__field {
+                padding: 6px !important;
+            }
+            /* Ocultar el botón de limpiar */
+            .select2-container--default .select2-selection--single .select2-selection__clear {
+                display: none !important;
+            }
+            .select2-container--default .select2-selection--single:focus {
+                border-color: #007bff;
+                outline: none;
+                box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+            }
         </style>
     
         <div class="container">
@@ -286,6 +333,21 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             <input type="password" name="users[0][password]" required>
                         </div>
                         <div class="form-group">
+                            <label for="codigo_transportista">Código de Transportista:</label>
+                            <select name="users[0][codigo_transportista]" class="form-control select2-transportista" data-placeholder="Buscar transportista por código o nombre...">
+                                <option value="">Seleccionar transportista (opcional)</option>
+                                <?php foreach ($transportistas as $transportista): ?>
+                                    <?php 
+                                    $codigo = $transportistaDataAccess->valueForKey('identificador', $transportista);
+                                    $nombre = $transportistaDataAccess->valueForKey('nombre', $transportista);
+                                    ?>
+                                    <option value="<?php echo htmlspecialchars($codigo); ?>">
+                                        <?php echo htmlspecialchars($codigo . ' - ' . $nombre); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <div class="roles-header">
                                 <div class="roles-title">Roles:</div>
                                 <input type="text" 
@@ -312,6 +374,9 @@ class CreateUserHTMLPage extends GTKHTMLPage
                 <div class="form-group">
                     <label for="excel_file">O cargar archivo de Excel:</label>
                     <input type="file" name="excel_file" id="excel_file" accept=".xlsx, .xls">
+                    <small class="form-text text-muted">
+                        Formato del Excel: Cédula | Nombres | Apellidos | Email | Contraseña | Roles (IDs separados por coma) | Código Transportista (opcional)
+                    </small>
                 </div>
                 <div class="form-group">
                     <input type="submit" value="Crear Usuarios" class="btn">
@@ -319,9 +384,53 @@ class CreateUserHTMLPage extends GTKHTMLPage
             </form>
         </div>
 
+        <!-- jQuery y Select2 CSS y JS -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
         <script>
             let userFormCount = 1;
+
+            // Inicializar Select2 en todos los selects de transportista existentes
+            $(document).ready(function() {
+                $('.select2-transportista').select2({
+                    placeholder: 'Buscar transportista por código o nombre...',
+                    allowClear: false,
+                    width: '100%',
+                    language: {
+                        noResults: function() {
+                            return "No se encontraron transportistas";
+                        },
+                        searching: function() {
+                            return "Buscando...";
+                        }
+                    },
+                    matcher: function(params, data) {
+                        // Si no hay término de búsqueda, mostrar la opción
+                        if ($.trim(params.term) === '') {
+                            return data;
+                        }
+
+                        // No mostrar la opción si no hay texto
+                        if (typeof data.text === 'undefined') {
+                            return null;
+                        }
+
+                        // Búsqueda case-insensitive y con acentos
+                        const normalizedTerm = params.term.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const normalizedText = data.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                        // Si el texto contiene el término de búsqueda, mostrar la opción
+                        if (normalizedText.indexOf(normalizedTerm) > -1) {
+                            return data;
+                        }
+
+                        // Si no hay coincidencia, no mostrar la opción
+                        return null;
+                    }
+                });
+            });
 
             function addUserForm() {
                 const userFormsContainer = document.getElementById('userFormsContainer');
@@ -350,6 +459,21 @@ class CreateUserHTMLPage extends GTKHTMLPage
                         <input type="password" name="users[${userFormCount}][password]" required>
                     </div>
                     <div class="form-group">
+                        <label for="codigo_transportista">Código de Transportista:</label>
+                        <select name="users[${userFormCount}][codigo_transportista]" class="form-control select2-transportista" data-placeholder="Buscar transportista por código o nombre...">
+                            <option value="">Seleccionar transportista (opcional)</option>
+                            <?php foreach ($transportistas as $transportista): ?>
+                                <?php 
+                                $codigo = $transportistaDataAccess->valueForKey('identificador', $transportista);
+                                $nombre = $transportistaDataAccess->valueForKey('nombre', $transportista);
+                                ?>
+                                <option value="<?php echo htmlspecialchars($codigo); ?>">
+                                    <?php echo htmlspecialchars($codigo . ' - ' . $nombre); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <div class="roles-header">
                             <div class="roles-title">Roles:</div>
                             <input type="text" 
@@ -373,6 +497,48 @@ class CreateUserHTMLPage extends GTKHTMLPage
                     </div>
                 `;
                 userFormsContainer.appendChild(newUserForm);
+                
+                // Inicializar Select2 en el nuevo select de transportista
+                const newSelect = newUserForm.querySelector('.select2-transportista');
+                if (newSelect) {
+                    $(newSelect).select2({
+                        placeholder: 'Buscar transportista por código o nombre...',
+                        allowClear: false,
+                        width: '100%',
+                        language: {
+                            noResults: function() {
+                                return "No se encontraron transportistas";
+                            },
+                            searching: function() {
+                                return "Buscando...";
+                            }
+                        },
+                        matcher: function(params, data) {
+                            // Si no hay término de búsqueda, mostrar la opción
+                            if ($.trim(params.term) === '') {
+                                return data;
+                            }
+
+                            // No mostrar la opción si no hay texto
+                            if (typeof data.text === 'undefined') {
+                                return null;
+                            }
+
+                            // Búsqueda case-insensitive y con acentos
+                            const normalizedTerm = params.term.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            const normalizedText = data.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                            // Si el texto contiene el término de búsqueda, mostrar la opción
+                            if (normalizedText.indexOf(normalizedTerm) > -1) {
+                                return data;
+                            }
+
+                            // Si no hay coincidencia, no mostrar la opción
+                            return null;
+                        }
+                    });
+                }
+                
                 userFormCount++;
             }
 
@@ -431,12 +597,31 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             // Handle roles if they exist
                             if (row[5]) {
                                 const roleIds = row[5].toString().split(',').map(id => id.trim());
-                                roleIds.forEach(roleId => {
+                            roleIds.forEach(roleId => {
                                     const checkbox = currentForm.querySelector(`input[name="users[${userFormCount - 1}][role_ids][]"][value="${roleId}"]`);
-                                    if (checkbox) {
-                                        checkbox.checked = true;
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                }
+                            });
+                            }
+                            
+                            // Handle código de transportista if it exists
+                            if (row[6]) {
+                                const codigoTransportista = row[6].toString().trim();
+                                const selectTransportista = currentForm.querySelector(`select[name="users[${userFormCount - 1}][codigo_transportista]"]`);
+                                if (selectTransportista) {
+                                    // Buscar la opción que coincida con el código
+                                    for (let option of selectTransportista.options) {
+                                        if (option.value === codigoTransportista) {
+                                            option.selected = true;
+                                            // Actualizar Select2 si está inicializado
+                                            if ($(selectTransportista).hasClass('select2-hidden-accessible')) {
+                                                $(selectTransportista).trigger('change');
+                                            }
+                                            break;
+                                        }
                                     }
-                                });
+                                }
                             }
                         });
                         
@@ -445,6 +630,75 @@ class CreateUserHTMLPage extends GTKHTMLPage
                     };
                     reader.readAsArrayBuffer(file);
                 }
+            });
+
+            // --- NUEVO: Reindexar formularios antes de enviar ---
+            document.getElementById('userForm').addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevenir el envío inmediato
+                const userFormsContainer = document.getElementById('userFormsContainer');
+                const forms = userFormsContainer.querySelectorAll('.user-form');
+                forms.forEach((form, idx) => {
+                    // Reindexar los campos de cada formulario
+                    form.querySelectorAll('input, select, label').forEach(el => {
+                        if (el.name) {
+                            el.name = el.name.replace(/users\[\d+\]/g, `users[${idx}]`);
+                        }
+                        if (el.id) {
+                            el.id = el.id.replace(/role_\d+_/g, `role_${idx}_`);
+                        }
+                        if (el.htmlFor) {
+                            el.htmlFor = el.htmlFor.replace(/role_\d+_/g, `role_${idx}_`);
+                        }
+                        if (el.getAttribute('oninput')) {
+                            el.setAttribute('oninput', `filterRoles(this, ${idx})`);
+                        }
+                    });
+                    
+                    // Manejar Select2 si existe
+                    const select2Element = form.querySelector('.select2-transportista');
+                    if (select2Element && $(select2Element).hasClass('select2-hidden-accessible')) {
+                        // Destruir y recrear Select2 para el nuevo índice
+                        $(select2Element).select2('destroy');
+                        $(select2Element).select2({
+                            placeholder: 'Buscar transportista por código o nombre...',
+                            allowClear: false,
+                            width: '100%',
+                            language: {
+                                noResults: function() {
+                                    return "No se encontraron transportistas";
+                                },
+                                searching: function() {
+                                    return "Buscando...";
+                                }
+                            },
+                            matcher: function(params, data) {
+                                // Si no hay término de búsqueda, mostrar la opción
+                                if ($.trim(params.term) === '') {
+                                    return data;
+                                }
+
+                                // No mostrar la opción si no hay texto
+                                if (typeof data.text === 'undefined') {
+                                    return null;
+                                }
+
+                                // Búsqueda case-insensitive y con acentos
+                                const normalizedTerm = params.term.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                const normalizedText = data.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                                // Si el texto contiene el término de búsqueda, mostrar la opción
+                                if (normalizedText.indexOf(normalizedTerm) > -1) {
+                                    return data;
+                                }
+
+                                // Si no hay coincidencia, no mostrar la opción
+                                return null;
+                            }
+                        });
+                    }
+                });
+                // Enviar el formulario manualmente solo con los formularios presentes
+                this.submit();
             });
         </script>
     
