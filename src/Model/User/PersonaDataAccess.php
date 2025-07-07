@@ -305,6 +305,15 @@ class PersonaDataAccess extends DataAccess
                 "isUnique"      => true,
 				"processOnAll"  => function ($rawEmail) { return strtolower($rawEmail); },
 			]),
+			new GTKColumnMapping($this, "codigo_transportista", [
+				"formLabel" => "Código de Transportista",
+				"formInputType" => "text",
+				"hideOnLists" => false,
+				"hideOnShow" => false,
+				"hideOnForms" => false,
+				"isRequired" => false,
+				"helpText" => "Código único del transportista para filtrar conduces específicos",
+			]),
 			$passwordVirtualColumn,
 			new GTKColumnMapping($this, "password_hash", [
 				'hideOnShow'  => true,
@@ -668,9 +677,9 @@ class PersonaDataAccess extends DataAccess
 	public function createUser($user)
 	{
 		$query = "INSERT INTO {$this->tableName()} 
-			(cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado)
+			(cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado, codigo_transportista)
 			VALUES
-			(:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo')";
+			(:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo', :codigo_transportista)";
 			
 		$statement = $this->getDB()->prepare($query);
 
@@ -687,6 +696,7 @@ class PersonaDataAccess extends DataAccess
 		$statement->bindValue(':email', 		$user["email"]);
 		$statement->bindValue(':password_hash', $user["password_hash"]);
 		$statement->bindValue(':fecha_creado',  date(DATE_ATOM) );
+		$statement->bindValue(':codigo_transportista', isset($user["codigo_transportista"]) ? $user["codigo_transportista"] : null);
 		
 		// Execute the INSERT statement
 		$result = $statement->execute();
