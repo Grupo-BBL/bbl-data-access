@@ -329,6 +329,7 @@ class PersonaDataAccess extends DataAccess
 					'inactivo' 	 => ['label'=>'Inactivo'],
 				],
 			]),
+			new GTKColumnMapping($this, "Nombre_transportista"),
 		];
 
 		$this->dataMapping		        = new GTKDataSetMapping($this, $columnMappings);
@@ -677,9 +678,9 @@ class PersonaDataAccess extends DataAccess
 	public function createUser($user)
 	{
 		$query = "INSERT INTO {$this->tableName()} 
-			(cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado, codigo_transportista)
+			(cedula,  nombres,  apellidos,  email,  password_hash, fecha_creado, estado, Nombre_transportista)
 			VALUES
-			(:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo', :codigo_transportista)";
+			(:cedula, :nombres, :apellidos, :email, :password_hash, :fecha_creado, 'activo', :Nombre_transportista)";
 			
 		$statement = $this->getDB()->prepare($query);
 
@@ -696,7 +697,7 @@ class PersonaDataAccess extends DataAccess
 		$statement->bindValue(':email', 		$user["email"]);
 		$statement->bindValue(':password_hash', $user["password_hash"]);
 		$statement->bindValue(':fecha_creado',  date(DATE_ATOM) );
-		$statement->bindValue(':codigo_transportista', isset($user["codigo_transportista"]) ? $user["codigo_transportista"] : null);
+		$statement->bindValue(':Nombre_transportista', $user["Nombre_transportista"]);
 		
 		// Execute the INSERT statement
 		$result = $statement->execute();

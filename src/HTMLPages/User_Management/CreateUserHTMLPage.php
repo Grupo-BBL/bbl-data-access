@@ -19,17 +19,24 @@ class CreateUserHTMLPage extends GTKHTMLPage
         $rows = $sheet->toArray();
     
         $personaDataAccess = DataAccessManager::get('persona');
+        $transportistaDataAccess = DataAccessManager::get('transportista');
     
         foreach ($rows as $index => $row) {
             if ($index == 0) continue; 
     
+            $nombreTransportista = null;
+            if (isset($row[6]) && $row[6]) {
+                // Buscar el nombre por el código
+                $transportista = $transportistaDataAccess->getOne('identificador', $row[6]);
+                $nombreTransportista = $transportista ? $transportistaDataAccess->valueForKey('nombre', $transportista) : null;
+            }
             $userData = [
                 'cedula' => $row[0],
                 'nombres' => $row[1],
                 'apellidos' => $row[2],
                 'email' => $row[3],
                 'password' => $row[4],
-                'codigo_transportista' => isset($row[6]) ? $row[6] : null
+                'Nombre_transportista' => $nombreTransportista
             ];
             
             // Manejar roles - si no hay roles o está vacío, usar array vacío
@@ -53,15 +60,21 @@ class CreateUserHTMLPage extends GTKHTMLPage
     private function processFormInput($users)
     {
         $personaDataAccess = DataAccessManager::get('persona');
+        $transportistaDataAccess = DataAccessManager::get('transportista');
 
       foreach ($users as $user) {
+         $nombreTransportista = null;
+         if (isset($user['codigo_transportista']) && $user['codigo_transportista']) {
+            $transportista = $transportistaDataAccess->getOne('identificador', $user['codigo_transportista']);
+            $nombreTransportista = $transportista ? $transportistaDataAccess->valueForKey('nombre', $transportista) : null;
+         }
          $userData = [
             'cedula' => $user['cedula'],
             'nombres' => $user['nombres'],
             'apellidos' => $user['apellidos'],
             'email' => $user['email'],
             'password' => $user['password'],
-            'codigo_transportista' => isset($user['codigo_transportista']) ? $user['codigo_transportista'] : null
+            'Nombre_transportista' => $nombreTransportista
         ];
         $roleIds = $user['role_ids'] ?? [];
 
@@ -336,7 +349,8 @@ class CreateUserHTMLPage extends GTKHTMLPage
                             <label for="codigo_transportista">Código de Transportista:</label>
                             <select name="users[0][codigo_transportista]" class="form-control select2-transportista" data-placeholder="Buscar transportista por código o nombre...">
                                 <option value="">Seleccionar transportista (opcional)</option>
-                                <?php foreach ($transportistas as $transportista): ?>
+                                <?php foreach (
+                                    $transportistas as $transportista): ?>
                                     <?php 
                                     $codigo = $transportistaDataAccess->valueForKey('identificador', $transportista);
                                     $nombre = $transportistaDataAccess->valueForKey('nombre', $transportista);
@@ -462,7 +476,8 @@ class CreateUserHTMLPage extends GTKHTMLPage
                         <label for="codigo_transportista">Código de Transportista:</label>
                         <select name="users[${userFormCount}][codigo_transportista]" class="form-control select2-transportista" data-placeholder="Buscar transportista por código o nombre...">
                             <option value="">Seleccionar transportista (opcional)</option>
-                            <?php foreach ($transportistas as $transportista): ?>
+                            <?php foreach (
+                                $transportistas as $transportista): ?>
                                 <?php 
                                 $codigo = $transportistaDataAccess->valueForKey('identificador', $transportista);
                                 $nombre = $transportistaDataAccess->valueForKey('nombre', $transportista);
