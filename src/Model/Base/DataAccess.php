@@ -31,7 +31,7 @@ function generateSelectOptionsDataLabelColumn($rows, $currentValue, $dataSourceN
             //
         }
 
-    }
+    } 
 
     $language = "es";
 
@@ -526,7 +526,7 @@ abstract class DataAccess /* implements Serializable */
         {
             switch ($driverName)
             {
-                case "mysql":
+                
                 case "sqlsrv":
                 case "pgsql":
                 case "oci":
@@ -537,6 +537,7 @@ abstract class DataAccess /* implements Serializable */
                     gtk_log("Table is not created. Consider: ".$sql);
                     return;
                 case "sqlite":
+                case "mysql":
                 default:
                     $this->createTable();
                     return;
@@ -1838,7 +1839,10 @@ abstract class DataAccess /* implements Serializable */
                 $sql .= ", ";
             }
             
-            $sql .= $columnMapping->getCreateSQLForPDO($this->getPDO());      
+            // Usar getCreateSQLForDriverName para obtener el SQL completo de la columna
+            $driverName = $this->getPDO()->getAttribute(PDO::ATTR_DRIVER_NAME);
+            $columnSQL = $columnMapping->getCreateSQLForDriverName($driverName);
+            $sql .= $columnSQL;
         }
 
         $sql .= ");";
@@ -1869,7 +1873,7 @@ abstract class DataAccess /* implements Serializable */
             {
                 if ($columnMapping->isUnique()) 
                 {
-                    $columnName = $columnMapping->dbColumnName();
+                    $columnName = $this->dataMapping->getColumnKeyForDB($columnMapping->phpKey);
                     // Assuming the table name is available in a variable $tableName
                     $uniqueIndexName = "unique_".$tableName."_".$columnName; // Generate a unique index name
                     $sql = "CREATE UNIQUE INDEX IF NOT EXISTS $uniqueIndexName ON $tableName ($columnName)"; // Append the SQL for creating a unique index
@@ -2461,10 +2465,10 @@ abstract class DataAccess /* implements Serializable */
     }
  
 
-
 	public function findByParameter($parameterName, $parameterValue)
 	{
-        $columnName = $this->dbColumnNameForKey($parameterName);
+        // Usar el nombre correcto de columna según la configuración
+        $columnName = $this->dataMapping->getColumnKeyForDB($parameterName);
 
 		$query = "SELECT * FROM {$this->tableName()} WHERE ".$columnName." = :parameterValue";
 		
@@ -3140,7 +3144,8 @@ abstract class DataAccess /* implements Serializable */
                 $sql.=  ", ";
             }
 
-            $columnName = $columnMapping->getSqlColumnName();
+            // CAMBIO: Usar el nombre correcto de columna
+            $columnName = $this->dataMapping->getColumnKeyForDB($columnMapping->phpKey);
             $sql .= $columnName;
             
             if ($debug)
@@ -5142,7 +5147,7 @@ abstract class DataAccess /* implements Serializable */
 			error_log("Data source: ".get_class($this));
 		}
 	
-		$index = 0;
+		$index = 0; // Initialize $index variable
 	
 		ob_start(); // Start output buffering 
 		?>
@@ -5212,4 +5217,46 @@ abstract class DataAccess /* implements Serializable */
 		</table>
 		<?php return ob_get_clean(); // End output buffering and get the buffered content as a string
 	}
+    
+    public function convertToPHPKeys($row)
+    {
+        $converted = [];
+        
+        // Iterar sobre todas las columnas mapeadas
+        foreach ($this->dataMapping->ordered as $columnMapping) {
+            $phpKey = $columnMapping->phpKey;
+            $dbKey = $columnMapping->sqlServerKey; 
+            
+            if ($dbKey && isset($row[$dbKey])) {
+                $converted[$phpKey] = $row[$dbKey];
+            }
+            // Si el row ya tiene el phpKey (y no el dbKey), mantenerlo
+            else if (isset($row[$phpKey])) {
+                $converted[$phpKey] = $row[$phpKey];
+            }
+        }
+        
+        return $converted;
+    }
+
+    public function getAllRecords($options = [])
+    {
+        $sql = "SELECT * FROM " . $this->tableName();
+        
+        // Agregar ORDER BY si se especifica
+        if (isset($options['orderBy'])) {
+            $sql .= " ORDER BY " . $options['orderBy'];
+        }
+        
+        // Agregar LIMIT si se especifica
+        if (isset($options['limit'])) {
+            $sql .= " LIMIT " . (int)$options['limit'];
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 }

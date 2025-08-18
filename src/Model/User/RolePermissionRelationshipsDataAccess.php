@@ -12,41 +12,34 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
                 "isPrimaryKey" => true, 
                 "isAutoIncrement" => true, 
                 "hideOnForms" => true,
+                "type" => "int",
             ]), 
             new GTKColumnMapping($this, "permission_id", [
-                "columnType" => "INTEGER",
+                "type" => "int",
             ]),
             new GTKColumnMapping($this, "role_id", [
-                "columnType" => "INTEGER",
+                "type" => "int",
             ]),
-            new GTKColumnMapping($this, "qualifiers"),
-			new GTKColumnMapping($this, "comments"),
+            new GTKColumnMapping($this, "qualifiers", [
+                "type" => "text",
+            ]),
+			new GTKColumnMapping($this, "comments", [
+                "type" => "text",
+            ]),
 			new GTKColumnMapping($this, "is_active", [
-                "columnType" => "BOOLEAN",
+                "type" => "tinyint(1)",
             ]),
-			new GTKColumnMapping($this, "date_created"),
-			new GTKColumnMapping($this, "date_modified"),
+			new GTKColumnMapping($this, "date_created", [
+                "type" => "datetime",
+            ]),
+			new GTKColumnMapping($this, "date_modified", [
+                "type" => "datetime",
+            ]),
 		];
 
 		$this->dataMapping = new GTKDataSetMapping($this, $columnMappings);
     }
 
-    public function migrate()
-    {
-        $this->getDB()->query("CREATE TABLE IF NOT EXISTS {$this->tableName()} 
-        (role_permission_relationship_id INTEGER PRIMARY KEY,
-         role_id,
-         permission_id, 
-         comments,
-         is_active,
-         date_created,
-         date_modified,
-        UNIQUE(role_permission_relationship_id))");
-
-        // $this->getDB()->query("ALTER TABLE ".$this->tableName()." ADD COLUMN qualifiers;");
-        $this->addColumnIfNotExists("qualifiers");
-
-    }
 
     public function permissionRelationsForRole($role)
     {
@@ -137,6 +130,11 @@ class RolePermissionRelationshipsDataAccess extends DataAccess
                 gtk_log("Permission Relations: ".print_r($permissionRelation, true));
             }
             $permissionIDS[] = $permissionRelation["permission_id"];
+        }
+
+        // Validación para evitar SQL IN () vacío
+        if (empty($permissionIDS)) {
+            return [];
         }
 
         if ($debug)
