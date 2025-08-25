@@ -1497,6 +1497,27 @@ class PersonaDataAccess extends DataAccess
 		return true;
 	}
 
+	public function getUsuarioInfo($userId)
+    {
+        if (empty($userId) || $userId === 'N/A') {
+            return 'N/A';
+        }
+        
+        try {
+            $personaData = DataAccessManager::get('persona');
+            $persona = $personaData->getOne('id', $userId);
+            
+            if ($persona) {
+                $nombreCompleto = trim($persona['nombres'] . ' ' . $persona['apellidos']);
+                return htmlspecialchars($userId . ' - ' . $nombreCompleto);
+            } else {
+                return htmlspecialchars($userId . ' - Usuario no encontrado');
+            }
+        } catch (Exception $e) {
+            error_log("Error al obtener información de usuario ID {$userId}: " . $e->getMessage());
+            return htmlspecialchars($userId . ' - Error al obtener datos');
+        }
+    }
 }
 
 
