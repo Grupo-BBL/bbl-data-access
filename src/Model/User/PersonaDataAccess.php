@@ -136,8 +136,9 @@ class PersonaDataAccess extends DataAccess
 		$isDev              = $flatRoleDataAccess->isUserInRoleNamed("DEV",             $user);
         $isAdminAdmin       = $flatRoleDataAccess->isUserInRoleNamed("SOFTWARE_ADMIN",  $user);
         $isAdminUser        = $flatRoleDataAccess->isUserInRoleNamed("ADMIN_USER",      $user);
+        $isSupervisor       = $flatRoleDataAccess->isUserInRoleNamed("SUPERVISOR",      $user);
 
-		if ($isAdminAdmin || $isAdminUser || $isDev)
+		if ($isAdminAdmin || $isAdminUser || $isDev || $isSupervisor)
 		{
 			if ($debug)
 			{
