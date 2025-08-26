@@ -136,8 +136,9 @@ class PersonaDataAccess extends DataAccess
 		$isDev              = $flatRoleDataAccess->isUserInRoleNamed("DEV",             $user);
         $isAdminAdmin       = $flatRoleDataAccess->isUserInRoleNamed("SOFTWARE_ADMIN",  $user);
         $isAdminUser        = $flatRoleDataAccess->isUserInRoleNamed("ADMIN_USER",      $user);
+        $isSupervisor       = $flatRoleDataAccess->isUserInRoleNamed("SUPERVISOR",      $user);
 
-		if ($isAdminAdmin || $isAdminUser || $isDev)
+		if ($isAdminAdmin || $isAdminUser || $isDev || $isSupervisor)
 		{
 			if ($debug)
 			{
@@ -1497,7 +1498,30 @@ class PersonaDataAccess extends DataAccess
 		return true;
 	}
 
+	public function displayNameAndEmailUsuarioForId($userId)
+    {
+        if (empty($userId) || $userId === 'N/A') {
+            return 'N/A';
+        }
+        
+        try {
+            $personaData = DataAccessManager::get('persona');
+            $persona = $personaData->getOne('id', $userId);
+            
+            if ($persona) {
+                $nombreCompleto = trim($persona['nombres'] . ' ' . $persona['apellidos']);
+                $email = !empty($persona['email']) ? $persona['email'] : 'Sin email';
+                return htmlspecialchars($userId . ' - ' . $nombreCompleto . ' (' . $email . ')');
+            } else {
+                return htmlspecialchars($userId . ' - Usuario no encontrado');
+            }
+        } catch (Exception $e) {
+            error_log("Error al obtener información de usuario ID {$userId}: " . $e->getMessage());
+            return htmlspecialchars($userId . ' - Error al obtener datos');
+        }
+    }
 }
+
 
 
 /*
