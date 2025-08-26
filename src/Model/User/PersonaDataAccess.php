@@ -1498,7 +1498,7 @@ class PersonaDataAccess extends DataAccess
 		return true;
 	}
 
-	public function getUsuarioInfo($userId)
+	public function getUsuarioEmail($userId)
     {
         if (empty($userId) || $userId === 'N/A') {
             return 'N/A';
@@ -1510,7 +1510,8 @@ class PersonaDataAccess extends DataAccess
             
             if ($persona) {
                 $nombreCompleto = trim($persona['nombres'] . ' ' . $persona['apellidos']);
-                return htmlspecialchars($userId . ' - ' . $nombreCompleto);
+                $email = !empty($persona['email']) ? $persona['email'] : 'Sin email';
+                return htmlspecialchars($userId . ' - ' . $nombreCompleto . ' (' . $email . ')');
             } else {
                 return htmlspecialchars($userId . ' - Usuario no encontrado');
             }
@@ -1520,6 +1521,7 @@ class PersonaDataAccess extends DataAccess
         }
     }
 }
+
 
 
 /*
