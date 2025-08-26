@@ -1498,7 +1498,7 @@ class PersonaDataAccess extends DataAccess
 		return true;
 	}
 
-	public function getUsuarioEmail($userId)
+	public function displayNameAndEmailUsuarioForId($userId)
     {
         if (empty($userId) || $userId === 'N/A') {
             return 'N/A';
